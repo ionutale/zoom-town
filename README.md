@@ -2,6 +2,8 @@
 
 A portrait-first 3D toy-town racer for children aged 5–7. The car drives itself, the child steers, pops balloons, and boosts. Nobody loses; stars unlock the four animal drivers.
 
+**Live:** https://zoom-town.alexionutale.workers.dev
+
 ## Run
 
 ```sh
