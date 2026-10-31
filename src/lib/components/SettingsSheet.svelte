@@ -70,7 +70,7 @@
 	onDestroy(stopHold);
 </script>
 
-<div class="overlay">
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Settings">
 	<div class="card">
 		<button class="close" onclick={onClose} aria-label="Close settings">
 			<svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true">

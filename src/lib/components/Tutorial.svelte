@@ -52,7 +52,7 @@
 	const caption = $derived(advanced && step === 0 ? dragLines[lang] : lines[lang][step]);
 </script>
 
-<div class="overlay">
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Tutorial">
 	<div class="card">
 		<button class="skip" onclick={() => finish(true)} aria-label="Skip tutorial">
 			<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">

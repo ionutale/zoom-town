@@ -38,7 +38,7 @@
 	);
 </script>
 
-<div class="overlay">
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Install Zoom Town">
 	<div class="card">
 		<button class="close" onclick={onClose} aria-label={lang === 'it' ? 'Chiudi' : 'Close'}>
 			<svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true">

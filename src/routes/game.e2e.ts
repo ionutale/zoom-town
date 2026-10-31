@@ -118,6 +118,7 @@ test.describe('iOS installation', () => {
 		await expect(page.getByText('Installa Zoom Town')).toBeVisible();
 		await page.getByText('Installa Zoom Town').click();
 
+		await expect(page.getByRole('dialog', { name: 'Install Zoom Town' })).toBeVisible();
 		await expect(page.getByRole('heading', { name: 'Installa Zoom Town' })).toBeVisible();
 		await expect(page.getByText('Tocca il pulsante Condividi.')).toBeVisible();
 		await expect(page.getByText('Scegli Aggiungi alla schermata Home.')).toBeVisible();
@@ -259,6 +260,7 @@ test.describe('advanced driving', () => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 		await page.getByRole('button', { name: 'Settings' }).click();
+		await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
 		await page.getByRole('button', { name: 'Toggle advanced driving' }).click();
 		await page.getByRole('button', { name: 'Close settings' }).click();
 	}
