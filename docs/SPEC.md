@@ -205,7 +205,8 @@ One closed loop, clockwise, ~456 m, ten corners, 8 m wide. The layout has an ear
   - `src/lib/styles/tokens.css` — colour and motion tokens.
 - **Static deploy:** `pnpm build` → `build/`, served by Cloudflare Workers static assets via Wrangler.
 - **PWA:** portrait manifest, generated icons, service worker that precaches the shell and all committed audio; installable and playable offline after the first load.
-- **Tests:** Vitest for star/unlock/save/track math; Playwright for the portrait flow, a debug-driven race, persistence, audio asset loading, and screenshot baselines.
+- **iOS PWA:** `apple-mobile-web-app-capable`, `black-translucent` status bar, `Zoom Town` title, 152/167/180 touch icons, safe-area insets, `navigator.standalone` detection, and a custom install sheet. iOS Safari has no `beforeinstallprompt`, so the game shows a first-visit banner on the profile screen and keeps a Settings → Install app entry. The sheet explains Share → Add to Home Screen → Add, warns when the page is not in Safari, and stores “don’t show again”. Installed mode is full-screen, portrait, and offline.
+- **Tests:** Vitest for star/unlock/save/track math and iOS detection; Playwright for the portrait flow, a debug-driven race, persistence, audio asset loading, the iOS Safari install sheet, and screenshot baselines.
 
 ## 14. Performance & quality bar
 

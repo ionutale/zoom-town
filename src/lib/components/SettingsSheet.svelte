@@ -5,17 +5,21 @@
 	let {
 		settings,
 		hasProfile,
+		showInstall = false,
 		onSound,
 		onLang,
 		onMotion,
+		onInstall,
 		onReset,
 		onClose
 	}: {
 		settings: Settings;
 		hasProfile: boolean;
+		showInstall?: boolean;
 		onSound: () => void;
 		onLang: (lang: 'it' | 'en') => void;
 		onMotion: () => void;
+		onInstall?: () => void;
 		onReset: () => void;
 		onClose: () => void;
 	} = $props();
@@ -24,8 +28,8 @@
 	let timer: number | null = null;
 	const labels = $derived(
 		settings.lang === 'it'
-			? { sound: 'Suono', language: 'Lingua', calm: 'Calmo' }
-			: { sound: 'Sound', language: 'Language', calm: 'Calm' }
+			? { sound: 'Suono', language: 'Lingua', calm: 'Calmo', install: 'Installa app' }
+			: { sound: 'Sound', language: 'Language', calm: 'Calm', install: 'Install app' }
 	);
 
 	function startHold() {
@@ -143,6 +147,36 @@
 				<span></span>
 			</button>
 		</div>
+
+		{#if showInstall && onInstall}
+			<button class="install-row" onclick={() => onInstall?.()}>
+				<span class="icon">
+					<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+						<rect
+							x="8"
+							y="4"
+							width="24"
+							height="32"
+							rx="6"
+							fill="#FFF6E3"
+							stroke="#26313C"
+							stroke-width="2.4"
+						/>
+						<path
+							d="M20 9 V19 M16 13 L20 9 L24 13"
+							fill="none"
+							stroke="#26313C"
+							stroke-width="2.6"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+						<path d="M14 26 H26" stroke="#7CC242" stroke-width="3" stroke-linecap="round" />
+					</svg>
+				</span>
+				<span class="label">{labels.install}</span>
+				<span class="chevron" aria-hidden="true">›</span>
+			</button>
+		{/if}
 
 		{#if hasProfile}
 			<button
@@ -284,6 +318,21 @@
 		background: var(--zt-white);
 		color: var(--zt-ink);
 		box-shadow: 0 2px 0 var(--zt-shadow);
+	}
+	.install-row {
+		display: grid;
+		grid-template-columns: 40px 1fr auto;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 10px;
+		border-radius: 16px;
+		background: color-mix(in srgb, var(--zt-teal) 18%, var(--zt-white));
+		text-align: left;
+	}
+	.chevron {
+		font-size: 30px;
+		line-height: 1;
+		color: var(--zt-ink-soft);
 	}
 	.reset {
 		position: relative;

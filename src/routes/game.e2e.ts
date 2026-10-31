@@ -48,3 +48,36 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 	await page.setViewportSize({ width: 844, height: 390 });
 	await expect(page.getByText('Mettimi in verticale')).toBeVisible();
 });
+
+test.describe('iOS installation', () => {
+	test.use({
+		userAgent:
+			'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+		viewport: { width: 390, height: 844 },
+		deviceScaleFactor: 3,
+		isMobile: true,
+		hasTouch: true
+	});
+
+	test('shows Safari Add to Home Screen steps', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+
+		await expect(page.getByText('Installa Zoom Town')).toBeVisible();
+		await page.getByText('Installa Zoom Town').click();
+
+		await expect(page.getByRole('heading', { name: 'Installa Zoom Town' })).toBeVisible();
+		await expect(page.getByText('Tocca il pulsante Condividi.')).toBeVisible();
+		await expect(page.getByText('Scegli Aggiungi alla schermata Home.')).toBeVisible();
+		await expect(page.getByText('Tocca Aggiungi. Fatto!')).toBeVisible();
+
+		await page.getByRole('button', { name: 'Non mostrare più' }).click();
+		await expect(page.getByText('Installa Zoom Town')).toBeHidden();
+
+		await page.getByRole('button', { name: 'Settings' }).click();
+		await expect(page.getByText('Installa app')).toBeVisible();
+		await page.getByText('Installa app').click();
+		await expect(page.getByRole('heading', { name: 'Installa Zoom Town' })).toBeVisible();
+		await page.getByRole('button', { name: 'Ho capito' }).click();
+	});
+});

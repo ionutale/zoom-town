@@ -44,6 +44,15 @@ All audio is generated locally and committed under `static/audio`; the game neve
 - [`docs/SPEC.md`](docs/SPEC.md) — screens, rules, track, save schema, acceptance tests.
 - [`docs/adr/`](docs/adr/) — stack, portrait-only, no-loss design, code-built art and locally generated audio.
 
+## Install on iOS
+
+1. Open the live URL in **Safari**.
+2. Tap the **Share** button.
+3. Scroll and choose **Add to Home Screen**.
+4. Tap **Add**.
+
+The installed app opens full-screen in portrait, keeps its own icon, and works offline after the first load. The game shows these steps on the first iOS visit and keeps them available under Settings → Install app. iOS Safari has no install prompt API, so the instructions are part of the app; Chrome/Firefox on iOS must hand off to Safari first.
+
 ## Deploy
 
 `pnpm build` writes a static site to `build/`. Serve it with Cloudflare Workers static assets (Wrangler) or any static host with SPA fallback. The PWA manifest is portrait-only and the service worker precaches the shell and audio for offline play after the first load.

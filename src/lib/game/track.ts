@@ -62,14 +62,28 @@ export const samples: TrackSample[] = Array.from({ length: SAMPLE_COUNT }, (_, i
 	makeSample(i / SAMPLE_COUNT, i)
 );
 
+function interpolateSample(u: number, rawDistance: number): TrackSample {
+	const raw = u * SAMPLE_COUNT;
+	const index = Math.floor(raw) % SAMPLE_COUNT;
+	const next = (index + 1) % SAMPLE_COUNT;
+	const fraction = raw - Math.floor(raw);
+	const a = samples[index];
+	const b = samples[next];
+
+	const pos = a.pos.clone().lerp(b.pos, fraction);
+	const tangent = a.tangent.clone().lerp(b.tangent, fraction).normalize();
+	const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
+	return { pos, tangent, normal, t: u, distance: rawDistance, index };
+}
+
 export function sampleAt(t: number): TrackSample {
 	const u = ((t % 1) + 1) % 1;
-	return samples[Math.floor(u * SAMPLE_COUNT) % SAMPLE_COUNT];
+	return interpolateSample(u, u * TRACK_LENGTH);
 }
 
 export function sampleAtDistance(distance: number): TrackSample {
 	const u = (((distance / TRACK_LENGTH) % 1) + 1) % 1;
-	return samples[Math.floor(u * SAMPLE_COUNT) % SAMPLE_COUNT];
+	return interpolateSample(u, distance);
 }
 
 export interface NearestResult {

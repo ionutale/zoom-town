@@ -53,7 +53,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 
 await writeFile(path.join(outDir, 'icon.svg'), svg);
 
-for (const size of [32, 180, 192, 512]) {
+for (const size of [32, 152, 167, 180, 192, 512]) {
 	const png = new Resvg(svg, {
 		fitTo: { mode: 'width', value: size },
 		background: '#7EC8F2'

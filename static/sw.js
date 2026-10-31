@@ -1,8 +1,10 @@
-const CACHE = 'zoom-town-v2';
+const CACHE = 'zoom-town-v4';
 const SHELL = [
 	'/',
 	'/manifest.webmanifest',
 	'/favicon.ico',
+	'/icons/icon-152.png',
+	'/icons/icon-167.png',
 	'/icons/icon-192.png',
 	'/icons/icon-512.png',
 	'/icons/apple-touch-icon.png'

@@ -13,12 +13,15 @@
 	} from '#lib/save';
 	import Garage from '#lib/components/Garage.svelte';
 	import Hud from '#lib/components/Hud.svelte';
+	import InstallBanner from '#lib/components/InstallBanner.svelte';
+	import InstallSheet from '#lib/components/InstallSheet.svelte';
 	import PauseMenu from '#lib/components/PauseMenu.svelte';
 	import ProfilePicker from '#lib/components/ProfilePicker.svelte';
 	import Results from '#lib/components/Results.svelte';
 	import RotateOverlay from '#lib/components/RotateOverlay.svelte';
 	import SettingsSheet from '#lib/components/SettingsSheet.svelte';
 	import Tutorial from '#lib/components/Tutorial.svelte';
+	import { isIosDevice, isIosSafari, isStandalone } from '#lib/pwa';
 
 	type Screen = 'profiles' | 'garage' | 'race';
 	type TutorialMode = 'first' | 'replay' | null;
@@ -38,7 +41,16 @@
 	let tutorialMode = $state<TutorialMode>(null);
 	let rotate = $state(false);
 	let rotateSpoke = false;
+	let iosDevice = $state(false);
+	let iosSafari = $state(true);
+	let installed = $state(false);
+	let installDismissed = $state(false);
+	let installOpen = $state(false);
 	let wakeLock: { release: () => Promise<void> } | null = null;
+
+	let showInstallBanner = $derived(
+		iosDevice && !installed && !installDismissed && screen === 'profiles' && !installOpen
+	);
 
 	const tutorialVoiceKeys = ['tutorial_steer', 'tutorial_boost', 'tutorial_balloons'] as const;
 
@@ -69,6 +81,14 @@
 			navigator.serviceWorker.register('/sw.js').catch(() => {});
 		}
 		save = loadSave();
+		iosDevice = isIosDevice();
+		iosSafari = isIosSafari();
+		installed = isStandalone();
+		try {
+			installDismissed = localStorage.getItem('zoomtown.installDismissed') === '1';
+		} catch {
+			installDismissed = false;
+		}
 		document.documentElement.classList.toggle('reduced-motion', save.settings.reducedMotion);
 		const initialCar = save.profiles.find((p) => p !== null)?.selectedCar ?? 'bear';
 		game = new ZoomTownGame({
@@ -321,6 +341,16 @@
 		releaseWakeLock();
 	}
 
+	function dismissInstall() {
+		installDismissed = true;
+		installOpen = false;
+		try {
+			localStorage.setItem('zoomtown.installDismissed', '1');
+		} catch {
+			// Private mode can reject storage; the banner stays dismissed for this session.
+		}
+	}
+
 	async function enterImmersive() {
 		try {
 			if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -396,13 +426,35 @@
 			<Tutorial lang={save.settings.lang} onDone={onTutorialDone} onStep={handleTutorialStep} />
 		{/if}
 
+		{#if showInstallBanner}
+			<InstallBanner
+				lang={save.settings.lang}
+				onOpen={() => (installOpen = true)}
+				onDismiss={dismissInstall}
+			/>
+		{/if}
+
+		{#if installOpen}
+			<InstallSheet
+				lang={save.settings.lang}
+				safari={iosSafari}
+				onClose={() => (installOpen = false)}
+				onDismiss={dismissInstall}
+			/>
+		{/if}
+
 		{#if settingsOpen}
 			<SettingsSheet
 				settings={save.settings}
 				hasProfile={profile !== null}
+				showInstall={iosDevice && !installed}
 				onSound={toggleSound}
 				onLang={setLang}
 				onMotion={toggleMotion}
+				onInstall={() => {
+					settingsOpen = false;
+					installOpen = true;
+				}}
 				onReset={resetCurrentProfile}
 				onClose={() => (settingsOpen = false)}
 			/>
