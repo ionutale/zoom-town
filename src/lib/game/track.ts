@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeMeshesByMaterial } from './merge';
 import { COLORS } from './palette';
 
 export const TRACK_WIDTH = 8;
@@ -451,6 +452,7 @@ export function buildTrackGroup(track: Track): THREE.Group {
 
 	const start = track.sampleAt(track.startLineT);
 	const checker = new THREE.Group();
+	const tiles: THREE.Mesh[] = [];
 	for (let i = 0; i < 8; i++) {
 		const across = -track.halfWidth + 0.5 + i;
 		const tile = new THREE.Mesh(
@@ -463,8 +465,9 @@ export function buildTrackGroup(track: Track): THREE.Group {
 			start.pos.z + start.normal.z * across
 		);
 		tile.rotation.y = Math.atan2(start.tangent.x, start.tangent.z);
-		checker.add(tile);
+		tiles.push(tile);
 	}
+	checker.add(...mergeMeshesByMaterial(tiles));
 	group.add(checker);
 	group.add(buildGantry(track));
 	return group;
@@ -478,34 +481,36 @@ function buildGantry(track: Track): THREE.Group {
 
 	const postMaterial = new THREE.MeshLambertMaterial({ color: COLORS.cream });
 	const stripeMaterial = new THREE.MeshLambertMaterial({ color: COLORS.red });
+	const parts: THREE.Mesh[] = [];
 	for (const side of [-1, 1]) {
 		const post = new THREE.Mesh(new THREE.BoxGeometry(0.38, 5.8, 0.38), postMaterial);
 		post.position.set(side * (track.halfWidth + 0.6), 2.9, 0);
-		gantry.add(post);
+		parts.push(post);
 		const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.9, 0.4), stripeMaterial);
 		stripe.position.set(side * (track.halfWidth + 0.6), 3.5, 0);
-		gantry.add(stripe);
+		parts.push(stripe);
 	}
 	const beam = new THREE.Mesh(
 		new THREE.BoxGeometry(track.width + 2.6, 0.72, 0.7),
 		postMaterial
 	);
 	beam.position.y = 5.55;
-	gantry.add(beam);
+	parts.push(beam);
 	const stripe = new THREE.Mesh(
 		new THREE.BoxGeometry(track.width + 2.6, 0.22, 0.74),
 		stripeMaterial
 	);
 	stripe.position.y = 5.55;
-	gantry.add(stripe);
+	parts.push(stripe);
 	for (const x of [-3, 0, 3]) {
 		const lamp = new THREE.Mesh(
 			new THREE.SphereGeometry(0.34, 12, 10),
 			new THREE.MeshBasicMaterial({ color: COLORS.gold })
 		);
 		lamp.position.set(x, 5.9, 0.1);
-		gantry.add(lamp);
+		parts.push(lamp);
 	}
+	gantry.add(...mergeMeshesByMaterial(parts));
 	return gantry;
 }
 

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeMeshesByMaterial } from './merge';
 import { CAR_BY_ID, type CarId, type CarSpec } from './cars';
 import { COLORS } from './palette';
 import type { NearestResult, Track } from './track';
@@ -14,13 +16,43 @@ export const STEER_HIGH = 1.6;
 export interface CarVisual {
 	group: THREE.Group;
 	body: THREE.Group;
-	wheels: THREE.Group[];
+	wheels: THREE.InstancedMesh;
+	wheelAngle: number;
 }
 
-const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.24, 12);
+const WHEEL_RADIUS = 0.3;
+const WHEEL_POSITIONS = [-0.72, 0.72].flatMap((x) =>
+	[-0.68, 0.68].map((z) => new THREE.Vector3(x, 0.3, z))
+);
+
+const wheelGeometry = new THREE.CylinderGeometry(WHEEL_RADIUS, WHEEL_RADIUS, 0.24, 12);
 const hubGeometry = new THREE.CylinderGeometry(0.13, 0.13, 0.26, 10);
-const wheelMaterial = new THREE.MeshLambertMaterial({ color: COLORS.ink });
-const hubMaterial = new THREE.MeshLambertMaterial({ color: COLORS.cream });
+
+function tintGeometry(geometry: THREE.BufferGeometry, color: number): void {
+	const vertexColor = new THREE.Color(color);
+	const count = geometry.getAttribute('position').count;
+	const colors = new Float32Array(count * 3);
+	for (let i = 0; i < count; i++) {
+		colors[i * 3] = vertexColor.r;
+		colors[i * 3 + 1] = vertexColor.g;
+		colors[i * 3 + 2] = vertexColor.b;
+	}
+	geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+}
+
+// Tyre and hub share one geometry so all four wheels spin as a single
+// InstancedMesh. Vertex colours keep the two original colours.
+const wheelSpinGeometry = (() => {
+	const rotation = new THREE.Matrix4().makeRotationZ(Math.PI / 2);
+	const tyre = wheelGeometry.clone().applyMatrix4(rotation);
+	const hub = hubGeometry.clone().applyMatrix4(rotation);
+	tintGeometry(tyre, COLORS.ink);
+	tintGeometry(hub, COLORS.cream);
+	const merged = mergeGeometries([tyre, hub], false);
+	return merged ?? tyre;
+})();
+
+const wheelMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0): THREE.Mesh {
 	const mesh = new THREE.Mesh(
@@ -31,12 +63,34 @@ function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0
 	return mesh;
 }
 
+const wheelQuaternion = new THREE.Quaternion();
+const wheelMatrix = new THREE.Matrix4();
+const unitScale = new THREE.Vector3(1, 1, 1);
+const wheelAxis = new THREE.Vector3(1, 0, 0);
+
+function setWheelAngle(wheels: THREE.InstancedMesh, angle: number): void {
+	wheelQuaternion.setFromAxisAngle(wheelAxis, angle);
+	WHEEL_POSITIONS.forEach((position, index) => {
+		wheelMatrix.compose(position, wheelQuaternion, unitScale);
+		wheels.setMatrixAt(index, wheelMatrix);
+	});
+	wheels.instanceMatrix.needsUpdate = true;
+}
+
+function createWheels(): THREE.InstancedMesh {
+	const wheels = new THREE.InstancedMesh(wheelSpinGeometry, wheelMaterial, WHEEL_POSITIONS.length);
+	wheels.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+	setWheelAngle(wheels, 0);
+	return wheels;
+}
+
 export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 	const group = new THREE.Group();
 	const body = new THREE.Group();
 	group.add(body);
 	const color = parseInt(spec.color.slice(1), 16);
 	const dark = parseInt(spec.dark.slice(1), 16);
+	const parts: THREE.Mesh[] = [];
 
 	const shadow = new THREE.Mesh(
 		new THREE.CircleGeometry(1.15, 24),
@@ -51,16 +105,16 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 	shadow.position.y = 0.015;
 	group.add(shadow);
 
-	body.add(box(1.46, 0.26, 2.26, dark, 0, 0.36, 0));
-	body.add(box(1.36, 0.4, 2.12, color, 0, 0.58, 0));
-	body.add(box(1.18, 0.16, 0.72, color, 0, 0.82, 0.68));
-	body.add(box(1.02, 0.46, 0.98, COLORS.cream, 0, 0.98, -0.12));
-	body.add(box(0.92, 0.24, 0.04, COLORS.ink, 0, 1.02, 0.38));
+	parts.push(box(1.46, 0.26, 2.26, dark, 0, 0.36, 0));
+	parts.push(box(1.36, 0.4, 2.12, color, 0, 0.58, 0));
+	parts.push(box(1.18, 0.16, 0.72, color, 0, 0.82, 0.68));
+	parts.push(box(1.02, 0.46, 0.98, COLORS.cream, 0, 0.98, -0.12));
+	parts.push(box(0.92, 0.24, 0.04, COLORS.ink, 0, 1.02, 0.38));
 	for (const side of [-1, 1]) {
-		body.add(box(0.04, 0.24, 0.66, COLORS.ink, side * 0.52, 1.02, -0.14));
+		parts.push(box(0.04, 0.24, 0.66, COLORS.ink, side * 0.52, 1.02, -0.14));
 	}
-	body.add(box(1.28, 0.08, 0.3, dark, 0, 1.06, -1.0));
-	body.add(box(0.08, 0.2, 0.22, dark, 0, 0.92, -1.0));
+	parts.push(box(1.28, 0.08, 0.3, dark, 0, 1.06, -1.0));
+	parts.push(box(0.08, 0.2, 0.22, dark, 0, 0.92, -1.0));
 
 	for (const side of [-1, 1]) {
 		const headlight = new THREE.Mesh(
@@ -68,13 +122,11 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 			new THREE.MeshBasicMaterial({ color: COLORS.cream })
 		);
 		headlight.position.set(side * 0.44, 0.64, 1.07);
-		body.add(headlight);
-		const tail = box(0.22, 0.12, 0.06, COLORS.red, side * 0.46, 0.64, -1.08);
-		body.add(tail);
+		parts.push(headlight);
+		parts.push(box(0.22, 0.12, 0.06, COLORS.red, side * 0.46, 0.64, -1.08));
 	}
 
 	// Driver
-	const driver = new THREE.Group();
 	const fur = parseInt(spec.fur.slice(1), 16);
 	const furDark = parseInt(spec.furDark.slice(1), 16);
 	const head = new THREE.Mesh(
@@ -82,7 +134,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 		new THREE.MeshLambertMaterial({ color: fur, flatShading: true })
 	);
 	head.position.set(0, 1.28, -0.1);
-	driver.add(head);
+	parts.push(head);
 
 	const muzzle = new THREE.Mesh(
 		new THREE.SphereGeometry(0.12, 10, 8),
@@ -90,7 +142,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 	);
 	muzzle.position.set(0, 1.22, 0.08);
 	muzzle.scale.set(1.2, 0.8, 0.7);
-	driver.add(muzzle);
+	parts.push(muzzle);
 
 	for (const side of [-1, 1]) {
 		const eye = new THREE.Mesh(
@@ -98,7 +150,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 			new THREE.MeshBasicMaterial({ color: COLORS.ink })
 		);
 		eye.position.set(side * 0.09, 1.34, 0.16);
-		driver.add(eye);
+		parts.push(eye);
 	}
 
 	if (spec.ears === 'round') {
@@ -108,7 +160,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 				new THREE.MeshLambertMaterial({ color: fur, flatShading: true })
 			);
 			ear.position.set(side * 0.2, 1.5, -0.1);
-			driver.add(ear);
+			parts.push(ear);
 		}
 	} else if (spec.ears === 'long') {
 		for (const side of [-1, 1]) {
@@ -119,7 +171,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 			ear.scale.set(1, 3.4, 0.8);
 			ear.position.set(side * 0.13, 1.66, -0.1);
 			ear.rotation.z = side * 0.12;
-			driver.add(ear);
+			parts.push(ear);
 		}
 	} else {
 		const cone = spec.ears === 'pointed' ? 0.34 : 0.25;
@@ -130,7 +182,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 			);
 			ear.position.set(side * 0.16, 1.52, -0.1);
 			ear.rotation.z = side * -0.16;
-			driver.add(ear);
+			parts.push(ear);
 		}
 	}
 
@@ -143,7 +195,7 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 		);
 		tail.position.set(0, spec.id === 'bunny' ? 0.85 : 0.95, -1.18);
 		if (spec.id !== 'bunny') tail.rotation.x = Math.PI / 2.4;
-		driver.add(tail);
+		parts.push(tail);
 	}
 
 	if (isPlayer) {
@@ -152,28 +204,14 @@ export function createCarVisual(spec: CarSpec, isPlayer = false): CarVisual {
 			new THREE.MeshBasicMaterial({ color: COLORS.red })
 		);
 		balloonMark.position.set(0.55, 0.62, -0.72);
-		body.add(balloonMark);
+		parts.push(balloonMark);
 	}
 
-	body.add(driver);
+	body.add(...mergeMeshesByMaterial(parts));
+	const wheels = createWheels();
+	body.add(wheels);
 
-	const wheels: THREE.Group[] = [];
-	for (const x of [-0.72, 0.72]) {
-		for (const z of [-0.68, 0.68]) {
-			const wheel = new THREE.Group();
-			const tyre = new THREE.Mesh(wheelGeometry, wheelMaterial);
-			tyre.rotation.z = Math.PI / 2;
-			wheel.add(tyre);
-			const hub = new THREE.Mesh(hubGeometry, hubMaterial);
-			hub.rotation.z = Math.PI / 2;
-			wheel.add(hub);
-			wheel.position.set(x, 0.3, z);
-			body.add(wheel);
-			wheels.push(wheel);
-		}
-	}
-
-	return { group, body, wheels };
+	return { group, body, wheels, wheelAngle: 0 };
 }
 
 function shortestAngle(angle: number): number {
@@ -424,8 +462,7 @@ export class PlayerCar {
 			boost ? -0.035 : 0,
 			Math.min(1, dt * 6)
 		);
-		for (const wheel of this.visual.wheels) {
-			wheel.rotation.x -= (this.speed / 0.3) * dt;
-		}
+		this.visual.wheelAngle -= (this.speed / WHEEL_RADIUS) * dt;
+		setWheelAngle(this.visual.wheels, this.visual.wheelAngle);
 	}
 }
