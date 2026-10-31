@@ -21,7 +21,7 @@
 	const confetti = Array.from({ length: 22 }, (_, i) => i);
 </script>
 
-<div class="overlay">
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Race results">
 	<div class="confetti" aria-hidden="true">
 		{#each confetti as piece}
 			<span style={`--i:${piece}`}></span>

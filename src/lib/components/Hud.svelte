@@ -5,12 +5,14 @@
 	let {
 		hud,
 		advanced = false,
+		inactive = false,
 		onSteer,
 		onBoost,
 		onPause
 	}: {
 		hud: HudState;
 		advanced?: boolean;
+		inactive?: boolean;
 		onSteer: (value: number) => void;
 		onBoost: () => void;
 		onPause: () => void;
@@ -116,7 +118,7 @@
 	const dots = $derived(Array.from({ length: hud.totalBalloons }, (_, i) => i));
 </script>
 
-<div class="hud" class:boost={hud.boostTime > 0}>
+<div class="hud" class:boost={hud.boostTime > 0} inert={inactive} aria-hidden={inactive}>
 	<div class="top">
 		<div class="balloon-count" aria-label={`${hud.balloons} balloons`}>
 			<svg viewBox="0 0 24 30" width="24" height="30" aria-hidden="true">

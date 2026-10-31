@@ -429,6 +429,7 @@
 			<Hud
 				{hud}
 				advanced={save.settings.advancedDriving}
+				inactive={result !== null || paused}
 				onSteer={(value) => game?.setSteer(value)}
 				onBoost={() => game?.requestBoost()}
 				onPause={pauseGame}

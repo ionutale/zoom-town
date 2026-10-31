@@ -16,7 +16,7 @@
 	} = $props();
 </script>
 
-<div class="overlay">
+<div class="overlay" role="dialog" aria-modal="true" aria-label="Paused">
 	<div class="card">
 		<button class="big resume" onclick={onResume} aria-label="Resume">
 			<svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true">

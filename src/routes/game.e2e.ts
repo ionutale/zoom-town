@@ -174,7 +174,7 @@ test('track picker selects Dino Valley and remembers it per profile', async ({ p
 	expect(save.profiles[0].selectedTrack).toBe('dino-valley');
 });
 
-test('speedometer shows live speed and is covered by the results screen', async ({ page }) => {
+test('speedometer shows live speed and the results screen disables the HUD', async ({ page }) => {
 	await openGarage(page);
 	await startRace(page, 'bear', 'park-loop');
 
@@ -202,23 +202,19 @@ test('speedometer shows live speed and is covered by the results screen', async 
 	await expect(page.getByLabel('Race again')).toBeVisible();
 	await expect(page.getByLabel('3 of 3 stars')).toBeVisible();
 
-	// Verified behaviour: the HUD (and speedometer) stays mounted behind the
-	// results overlay. The speed drops to zero and the overlay wins hit testing.
-	await expect
-		.poll(() => displayedSpeed(page), { timeout: 3000, intervals: [100] })
-		.toBe(0);
+	// The results screen is a modal dialog: the HUD behind it must be inert so
+	// its buttons cannot be focused and its speed is not announced.
+	await expect(page.getByRole('dialog', { name: 'Race results' })).toBeVisible();
+	await expect(page.locator('.hud')).toHaveAttribute('inert', '');
+	await expect(page.locator('.hud')).toHaveAttribute('aria-hidden', 'true');
 
-	const coveredByResults = await page.evaluate(() => {
-		const speedoElement = document.querySelector('[aria-label^="Speed"]');
-		if (!speedoElement) return false;
-		const rect = speedoElement.getBoundingClientRect();
-		const topmost = document.elementFromPoint(
-			rect.left + rect.width / 2,
-			rect.top + rect.height / 2
-		);
-		return topmost !== null && !speedoElement.contains(topmost);
+	const focusStolen = await page.evaluate(() => {
+		const steer = document.querySelector('.hud .steer') as HTMLElement | null;
+		if (!steer) return false;
+		steer.focus();
+		return document.activeElement === steer;
 	});
-	expect(coveredByResults).toBe(true);
+	expect(focusStolen).toBe(false);
 });
 
 test('auto-steer badge appears after sustained rail contact and clears after release', async ({
@@ -370,4 +366,16 @@ test('boots offline from the precached build and shows a recovery card on failur
 	});
 	await expect(page.getByText('Il gioco non si è avviato.')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Ricarica' })).toBeVisible();
+});
+
+test('pause screen is a dialog and disables the racing HUD', async ({ page }) => {
+	await openGarage(page);
+	await startRace(page, 'bear', 'park-loop');
+
+	await page.getByRole('button', { name: 'Pause' }).click();
+	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
+	await expect(page.locator('.hud')).toHaveAttribute('inert', '');
+
+	await page.getByRole('button', { name: 'Resume' }).click();
+	await expect(page.locator('.hud')).not.toHaveAttribute('inert', '');
 });
