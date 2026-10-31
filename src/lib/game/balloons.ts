@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeMeshesByMaterial } from './merge';
 import { COLORS } from './palette';
 import type { Track } from './track';
 
@@ -45,6 +46,7 @@ export class Balloons {
 			for (let i = 0; i < BALLOON_TS.length; i++) {
 				const color = BALLOON_COLORS[i % BALLOON_COLORS.length];
 				const group = new THREE.Group();
+				const parts: THREE.Mesh[] = [];
 				const body = new THREE.Mesh(
 					balloonGeometry,
 					new THREE.MeshLambertMaterial({
@@ -55,27 +57,29 @@ export class Balloons {
 					})
 				);
 				body.scale.set(1, 1.16, 1);
-				group.add(body);
+				parts.push(body);
 
 				const band = new THREE.Mesh(bandGeometry, bandMaterial);
 				band.rotation.x = Math.PI / 2;
 				band.scale.set(1, 1, 0.32);
 				band.position.y = 0.05;
-				group.add(band);
+				parts.push(band);
 
 				const highlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
 				highlight.position.set(-0.14, 0.18, 0.3);
 				highlight.scale.set(1, 1.3, 0.6);
-				group.add(highlight);
+				parts.push(highlight);
 
 				const knot = new THREE.Mesh(knotGeometry, bandMaterial);
 				knot.position.y = -0.48;
 				knot.rotation.x = Math.PI;
-				group.add(knot);
+				parts.push(knot);
 
 				const string = new THREE.Mesh(stringGeometry, stringMaterial);
 				string.position.y = -0.78;
-				group.add(string);
+				parts.push(string);
+
+				group.add(...mergeMeshesByMaterial(parts));
 
 				this.items.push({
 					group,
