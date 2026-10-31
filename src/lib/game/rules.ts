@@ -1,4 +1,4 @@
-export const LAPS = 2;
+export const LAPS = 3;
 export const BALLOONS_PER_LAP = 5;
 export const TOTAL_BALLOONS = BALLOONS_PER_LAP * LAPS;
 

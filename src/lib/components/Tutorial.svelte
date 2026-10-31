@@ -3,10 +3,12 @@
 
 	let {
 		lang,
+		advanced = false,
 		onDone,
 		onStep
 	}: {
 		lang: Lang;
+		advanced?: boolean;
 		onDone: (skipped: boolean) => void;
 		onStep?: (index: number) => void;
 	} = $props();
@@ -42,7 +44,12 @@
 		onDone(skipped);
 	}
 
-	const caption = $derived(lines[lang][step]);
+	const dragLines: Record<Lang, string> = {
+		it: 'Trascina il dito a sinistra o a destra per sterzare.',
+		en: 'Drag your finger left or right to steer.'
+	};
+
+	const caption = $derived(advanced && step === 0 ? dragLines[lang] : lines[lang][step]);
 </script>
 
 <div class="overlay">
@@ -59,7 +66,35 @@
 		</button>
 
 		<div class="stage">
-			{#if step === 0}
+			{#if step === 0 && advanced}
+				<div class="drag-demo">
+					<div class="drag-bar">
+						<span class="drag-finger" aria-hidden="true"></span>
+					</div>
+					<div class="drag-arrows" aria-hidden="true">
+						<svg viewBox="0 0 48 48" width="30" height="30">
+							<path
+								d="M30 10 L14 24 L30 38"
+								fill="none"
+								stroke="#26313C"
+								stroke-width="6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+						<svg viewBox="0 0 48 48" width="30" height="30">
+							<path
+								d="M18 10 L34 24 L18 38"
+								fill="none"
+								stroke="#26313C"
+								stroke-width="6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</div>
+				</div>
+			{:else if step === 0}
 				<div class="steer-demo">
 					<div class="ghost-button left">
 						<svg viewBox="0 0 48 48" width="44" height="44" aria-hidden="true">
@@ -169,6 +204,46 @@
 </div>
 
 <style>
+	.drag-demo {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 22px;
+	}
+	.drag-bar {
+		position: relative;
+		width: 210px;
+		height: 62px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-ink) 12%, transparent);
+	}
+	.drag-finger {
+		position: absolute;
+		top: 8px;
+		left: 50%;
+		width: 58px;
+		height: 46px;
+		margin-left: -29px;
+		border-radius: 999px;
+		background: var(--zt-teal);
+		box-shadow: inset 0 0 0 3px var(--zt-ink);
+		animation: drag-slide 2.6s var(--zt-ease-boing) infinite;
+	}
+	@keyframes drag-slide {
+		0%,
+		100% {
+			transform: translateX(-56px);
+		}
+		50% {
+			transform: translateX(56px);
+		}
+	}
+	.drag-arrows {
+		display: flex;
+		gap: 96px;
+		opacity: 0.6;
+	}
+
 	.overlay {
 		position: absolute;
 		inset: 0;

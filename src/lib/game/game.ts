@@ -3,7 +3,7 @@ import { AudioEngine } from './audio';
 import { Balloons } from './balloons';
 import { ChaseCamera } from './camera';
 import { BOOST_DURATION, CRUISE_SPEED, MAX_CHARGES, PlayerCar } from './car';
-import { TOTAL_BALLOONS, starsForBalloons } from './rules';
+import { LAPS, TOTAL_BALLOONS, starsForBalloons } from './rules';
 import type { CarId } from './cars';
 import { Effects } from './effects';
 import { COLORS } from './palette';
@@ -50,6 +50,8 @@ export interface GameOptions {
 	sound: boolean;
 	reducedMotion: boolean;
 	lang: Lang;
+	/** Drag steering with no auto-steer help. */
+	advancedDriving?: boolean;
 	trackId?: TrackId;
 	onHud?: (state: HudState) => void;
 	onFinish?: (result: RaceResult) => void;
@@ -113,7 +115,7 @@ export class ZoomTownGame {
 		this.scene.add(this.balloons.root);
 		this.scene.add(this.effects.root);
 
-		this.player = new PlayerCar(options.carId, this.track);
+		this.player = new PlayerCar(options.carId, this.track, !options.advancedDriving);
 		this.scene.add(this.player.visual.group);
 
 		this.cameraRig = new ChaseCamera(this.track, 1);
@@ -222,6 +224,16 @@ export class ZoomTownGame {
 		this.cameraRig.calm = on;
 	}
 
+	setAdvancedDriving(value: boolean): void {
+		this.options.advancedDriving = value;
+		this.player.assist = !value;
+		if (!this.player.assist) {
+			this.player.autoSteering = false;
+			this.player.autoSteerTime = 0;
+		}
+		this.emitHud(true);
+	}
+
 	setLang(lang: Lang): void {
 		this.options.lang = lang;
 		this.audio.setLang(lang);
@@ -277,8 +289,8 @@ export class ZoomTownGame {
 
 	debugFinish(stars = 3): void {
 		this.balloons.forceCollect(stars === 3 ? TOTAL_BALLOONS : stars === 2 ? TOTAL_BALLOONS / 2 : 0);
-		this.player.raceDistance = this.track.length * 2;
-		this.player.lap = 2;
+		this.player.raceDistance = this.track.length * LAPS;
+		this.player.lap = LAPS;
 		this.player.finished = true;
 		this.finishRace();
 	}
@@ -335,7 +347,7 @@ export class ZoomTownGame {
 
 		this.balloons = new Balloons(this.track);
 		this.scene.add(this.balloons.root);
-		this.player = new PlayerCar(this.player.spec.id, this.track);
+		this.player = new PlayerCar(this.player.spec.id, this.track, !this.options.advancedDriving);
 		this.scene.add(this.player.visual.group);
 		this.cameraRig.setTrack(this.track);
 		this.effects.clear();
@@ -352,7 +364,7 @@ export class ZoomTownGame {
 
 	private replaceCar(carId: CarId): void {
 		this.player.visual.group.removeFromParent();
-		this.player = new PlayerCar(carId, this.track);
+		this.player = new PlayerCar(carId, this.track, !this.options.advancedDriving);
 		this.scene.add(this.player.visual.group);
 	}
 
@@ -479,14 +491,14 @@ export class ZoomTownGame {
 		if (!force && this.hudTimer < 0.05) return;
 		this.hudTimer = 0;
 		const near = this.track.nearestSample(this.player.pos, this.player.prevIndex);
-		const playerProgress = Math.min(1, Math.max(0, this.player.raceDistance / (this.track.length * 2)));
+		const playerProgress = Math.min(1, Math.max(0, this.player.raceDistance / (this.track.length * LAPS)));
 		const rivalProgress = this.rivals.map((rival) =>
-			Math.min(1, Math.max(0, (rival.distance - rival.startDistance) / (this.track.length * 2)))
+			Math.min(1, Math.max(0, (rival.distance - rival.startDistance) / (this.track.length * LAPS)))
 		);
 		this.options.onHud?.({
 			phase: this.phase,
 			lap: this.player.lap,
-			laps: 2,
+			laps: LAPS,
 			balloons: this.balloons.collectedTotal,
 			totalBalloons: TOTAL_BALLOONS,
 			charges: this.player.charges,

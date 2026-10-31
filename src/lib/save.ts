@@ -17,6 +17,7 @@ export interface Settings {
 	sound: boolean;
 	lang: Lang;
 	reducedMotion: boolean;
+	advancedDriving: boolean;
 }
 
 export interface SaveData {
@@ -31,7 +32,7 @@ export function defaultSave(): SaveData {
 	return {
 		version: 1,
 		profiles: [null, null, null],
-		settings: { sound: true, lang: 'it', reducedMotion: false }
+		settings: { sound: true, lang: 'it', reducedMotion: false, advancedDriving: false }
 	};
 }
 
@@ -70,7 +71,8 @@ export function loadSave(): SaveData {
 			settings: {
 				sound: parsed.settings?.sound !== false,
 				lang: parsed.settings?.lang === 'en' ? 'en' : 'it',
-				reducedMotion: Boolean(parsed.settings?.reducedMotion)
+				reducedMotion: Boolean(parsed.settings?.reducedMotion),
+				advancedDriving: parsed.settings?.advancedDriving === true
 			}
 		};
 	} catch {

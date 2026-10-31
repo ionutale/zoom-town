@@ -3,15 +3,36 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mergeMeshesByMaterial } from './merge';
 import { CAR_BY_ID, type CarId, type CarSpec } from './cars';
 import { COLORS } from './palette';
+import { LAPS } from './rules';
 import type { NearestResult, Track } from './track';
 
 export const CRUISE_SPEED = 11.5;
 export const BOOST_MULTIPLIER = 1.4;
+/** Advanced driving: 50 km/h cruise, drifting to 52 km/h on long straights. */
+export const ADVANCED_CRUISE = 50 / 3.6;
+export const ADVANCED_TOP = 52 / 3.6;
+export const ADVANCED_BOOST = 1.15;
+export const ADVANCED_RAIL_FACTOR = 0.65;
+const ADVANCED_RAMP_SECONDS = 2.5;
+const STRAIGHT_STEER = 0.2;
 export const BOOST_DURATION = 2;
 export const MAX_CHARGES = 3;
 export const ACCELERATION = 6;
 export const STEER_LOW = 2.2;
 export const STEER_HIGH = 1.6;
+
+export function targetSpeedFor(
+	advanced: boolean,
+	straightTime: number,
+	boosting: boolean,
+	railContact: boolean
+): number {
+	const ramp = Math.min(1, straightTime / ADVANCED_RAMP_SECONDS);
+	const base = advanced ? THREE.MathUtils.lerp(ADVANCED_CRUISE, ADVANCED_TOP, ramp) : CRUISE_SPEED;
+	const boost = boosting ? (advanced ? ADVANCED_BOOST : BOOST_MULTIPLIER) : 1;
+	const rail = railContact ? (advanced ? ADVANCED_RAIL_FACTOR : 0.9) : 1;
+	return base * boost * rail;
+}
 
 export interface CarVisual {
 	group: THREE.Group;
@@ -247,12 +268,16 @@ export class PlayerCar {
 	wallContactTime = 0;
 	autoSteerTime = 0;
 	autoSteering = false;
+	straightTime = 0;
 
 	track: Track;
+	/** Steering help (auto-steer after wall contact). Off in Advanced driving. */
+	assist: boolean;
 
-	constructor(carId: CarId, track: Track) {
+	constructor(carId: CarId, track: Track, assist = true) {
 		this.track = track;
 		this.spec = CAR_BY_ID[carId];
+		this.assist = assist;
 		this.visual = createCarVisual(this.spec, true);
 		this.reset();
 	}
@@ -278,6 +303,7 @@ export class PlayerCar {
 		this.wallContactTime = 0;
 		this.autoSteerTime = 0;
 		this.autoSteering = false;
+		this.straightTime = 0;
 		this.visual.group.position.copy(this.pos);
 		this.visual.group.rotation.y = this.heading;
 	}
@@ -301,7 +327,7 @@ export class PlayerCar {
 	}
 
 	get lapProgress(): number {
-		return THREE.MathUtils.clamp(this.raceDistance / this.track.length, 0, 2);
+		return THREE.MathUtils.clamp(this.raceDistance / this.track.length, 0, LAPS);
 	}
 
 	update(dt: number, steer: number, frozen: boolean): CarUpdate {
@@ -310,8 +336,15 @@ export class PlayerCar {
 		const railContact = this.touchingRail;
 
 		if (!frozen && !this.finished) {
-			const targetSpeed =
-				CRUISE_SPEED * (this.boostTime > 0 ? BOOST_MULTIPLIER : 1) * (railContact ? 0.9 : 1);
+			const advanced = !this.assist;
+			if (advanced && !railContact && Math.abs(steer) < STRAIGHT_STEER) {
+				// Long, clean straights let the advanced car creep past 50 km/h.
+				this.straightTime = Math.min(ADVANCED_RAMP_SECONDS, this.straightTime + dt);
+			} else {
+				this.straightTime = 0;
+			}
+			// Walls bite harder in advanced: the car has to earn its speed back.
+			const targetSpeed = targetSpeedFor(advanced, this.straightTime, this.boostTime > 0, railContact);
 			const maxDelta = ACCELERATION * dt;
 			const brakeDelta = ACCELERATION * 2.2 * dt;
 			if (this.speed < targetSpeed) {
@@ -366,7 +399,7 @@ export class PlayerCar {
 			if (this.touchingRail) this.wallContactTime += dt;
 			else this.wallContactTime = Math.max(0, this.wallContactTime - dt * 2);
 
-			if (!this.autoSteering && this.wallContactTime >= 2) {
+			if (this.assist && !this.autoSteering && this.wallContactTime >= 2) {
 				this.autoSteering = true;
 				this.autoSteerTime = 0;
 				this.wallContactTime = 0;
@@ -416,11 +449,11 @@ export class PlayerCar {
 			let delta = after.sample.distance - before.sample.distance;
 			if (delta < -this.track.length / 2) delta += this.track.length;
 			if (delta > this.track.length / 2) delta -= this.track.length;
-			this.raceDistance = Math.min(this.track.length * 2, this.raceDistance + delta);
-			this.lap = Math.min(2, Math.floor(this.raceDistance / this.track.length) + 1);
+			this.raceDistance = Math.min(this.track.length * LAPS, this.raceDistance + delta);
+			this.lap = Math.min(LAPS, Math.floor(this.raceDistance / this.track.length) + 1);
 
 			if (this.boostTime > 0) this.boostTime = Math.max(0, this.boostTime - dt);
-			if (this.raceDistance >= this.track.length * 2) this.finished = true;
+			if (this.raceDistance >= this.track.length * LAPS) this.finished = true;
 			this.prevIndex = after.index;
 			this.syncVisual(dt);
 		} else if (frozen) {

@@ -257,3 +257,72 @@ test('auto-steer badge appears after sustained rail contact and clears after rel
 		.toBe(false);
 	await expect(autoBadge).toBeHidden();
 });
+
+test.describe('advanced driving', () => {
+	async function enableAdvanced(page: Page): Promise<void> {
+		await page.goto('/');
+		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+		await page.getByRole('button', { name: 'Settings' }).click();
+		await page.getByRole('button', { name: 'Toggle advanced driving' }).click();
+		await page.getByRole('button', { name: 'Close settings' }).click();
+	}
+
+	test('steers with one-finger drag and hides the arrow buttons', async ({ page }) => {
+		await enableAdvanced(page);
+		await page.getByRole('button', { name: 'Profile 1' }).click();
+		await startRace(page, 'bear', 'park-loop');
+
+		await expect(page.getByRole('button', { name: 'Steer left' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Steer right' })).toHaveCount(0);
+
+		const surface = page.getByRole('slider', { name: 'Drag left or right to steer' });
+		await expect(surface).toBeVisible();
+		const box = await surface.boundingBox();
+		if (!box) throw new Error('drag surface has no box');
+		const y = box.y + box.height * 0.55;
+		const x = box.x + box.width / 2;
+
+		await page.mouse.move(x, y);
+		await page.mouse.down();
+		await page.mouse.move(x + 72, y, { steps: 6 });
+		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBeGreaterThan(0.5);
+
+		await page.mouse.move(x - 72, y, { steps: 6 });
+		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBeLessThan(-0.5);
+
+		await page.mouse.up();
+		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBe(0);
+	});
+
+	test('never engages auto-steer, even after wall contact', async ({ page }) => {
+		await enableAdvanced(page);
+		await page.getByRole('button', { name: 'Profile 1' }).click();
+		await startRace(page, 'bear', 'park-loop');
+
+		await page.evaluate(() => (window as any).__zoomtown.steer(1));
+		await expect
+			.poll(async () => (await debugState(page)).wallContactTime, { timeout: 12_000, intervals: [100] })
+			.toBeGreaterThan(2.2);
+
+		// The assisted mode would have taken over by now; advanced must not.
+		await expect
+			.poll(async () => (await debugState(page)).autoSteer, { timeout: 3000, intervals: [100] })
+			.toBe(false);
+		await expect(page.getByLabel('Auto steering')).toHaveCount(0);
+	});
+});
+
+test('races three laps and does not end on balloons', async ({ page }) => {
+	await openGarage(page);
+	await startRace(page, 'bear', 'park-loop');
+
+	await expect(page.getByLabel('Lap 1 of 3')).toBeVisible();
+
+	// Collecting every balloon must not finish the race; only lap 3 does.
+	await page.evaluate(() => (window as any).__zoomtown.collectAll());
+	await expect.poll(async () => (await debugState(page)).phase, { timeout: 4000 }).toBe('racing');
+	await expect(page.getByLabel('Lap 1 of 3')).toBeVisible();
+
+	await page.evaluate(() => (window as any).__zoomtown.finish(3));
+	await expect(page.getByLabel('3 of 3 stars')).toBeVisible();
+});

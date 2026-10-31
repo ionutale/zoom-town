@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { AVATARS, CAR_BY_ID, type CarId } from '#lib/game/cars';
+	import { LAPS, TOTAL_BALLOONS } from '#lib/game/rules';
 	import { DEFAULT_TRACK_ID, TRACK_DEFS, type TrackId } from '#lib/game/track';
 	import { ZoomTownGame, type HudState, type RaceResult } from '#lib/game/game';
 	import {
@@ -64,9 +65,9 @@
 		return {
 			phase: 'attract',
 			lap: 1,
-			laps: 2,
+			laps: LAPS,
 			balloons: 0,
-			totalBalloons: 10,
+			totalBalloons: TOTAL_BALLOONS,
 			charges: 0,
 			maxCharges: 3,
 			boostTime: 0,
@@ -100,6 +101,7 @@
 		game = new ZoomTownGame({
 			canvas,
 			carId: initialCar,
+			advancedDriving: save.settings.advancedDriving,
 			sound: save.settings.sound,
 			reducedMotion: save.settings.reducedMotion,
 			lang: save.settings.lang,
@@ -341,6 +343,13 @@
 		document.documentElement.classList.toggle('reduced-motion', settings.reducedMotion);
 	}
 
+	function toggleAdvanced() {
+		const settings = { ...save.settings, advancedDriving: !save.settings.advancedDriving };
+		save = { ...save, settings };
+		storeSave(save);
+		game?.setAdvancedDriving(settings.advancedDriving);
+	}
+
 	function setLang(lang: 'it' | 'en') {
 		const settings = { ...save.settings, lang };
 		save = { ...save, settings };
@@ -422,6 +431,7 @@
 		{:else if screen === 'race'}
 			<Hud
 				{hud}
+				advanced={save.settings.advancedDriving}
 				onSteer={(value) => game?.setSteer(value)}
 				onBoost={() => game?.requestBoost()}
 				onPause={pauseGame}
@@ -443,7 +453,12 @@
 		{/if}
 
 		{#if tutorialOpen}
-			<Tutorial lang={save.settings.lang} onDone={onTutorialDone} onStep={handleTutorialStep} />
+			<Tutorial
+				lang={save.settings.lang}
+				advanced={save.settings.advancedDriving}
+				onDone={onTutorialDone}
+				onStep={handleTutorialStep}
+			/>
 		{/if}
 
 		{#if showInstallBanner}
@@ -471,6 +486,7 @@
 				onSound={toggleSound}
 				onLang={setLang}
 				onMotion={toggleMotion}
+				onAdvanced={toggleAdvanced}
 				onInstall={() => {
 					settingsOpen = false;
 					installOpen = true;

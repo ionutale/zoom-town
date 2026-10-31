@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeMeshesByMaterial } from './merge';
+import { LAPS } from './rules';
 import { COLORS } from './palette';
 import type { Track } from './track';
 
@@ -42,7 +43,7 @@ export class Balloons {
 
 	constructor(track: Track) {
 		this.track = track;
-		for (let lap = 1; lap <= 2; lap++) {
+		for (let lap = 1; lap <= LAPS; lap++) {
 			for (let i = 0; i < BALLOON_TS.length; i++) {
 				const color = BALLOON_COLORS[i % BALLOON_COLORS.length];
 				const group = new THREE.Group();

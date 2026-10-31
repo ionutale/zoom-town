@@ -9,6 +9,7 @@
 		onSound,
 		onLang,
 		onMotion,
+		onAdvanced,
 		onInstall,
 		onReset,
 		onClose
@@ -19,6 +20,7 @@
 		onSound: () => void;
 		onLang: (lang: 'it' | 'en') => void;
 		onMotion: () => void;
+		onAdvanced: () => void;
 		onInstall?: () => void;
 		onReset: () => void;
 		onClose: () => void;
@@ -28,8 +30,20 @@
 	let timer: number | null = null;
 	const labels = $derived(
 		settings.lang === 'it'
-			? { sound: 'Suono', language: 'Lingua', calm: 'Calmo', install: 'Installa app' }
-			: { sound: 'Sound', language: 'Language', calm: 'Calm', install: 'Install app' }
+			? {
+					sound: 'Suono',
+					language: 'Lingua',
+					calm: 'Calmo',
+					advanced: 'Avanzata',
+					install: 'Installa app'
+				}
+			: {
+					sound: 'Sound',
+					language: 'Language',
+					calm: 'Calm',
+					advanced: 'Advanced',
+					install: 'Install app'
+				}
 	);
 
 	function startHold() {
@@ -143,6 +157,51 @@
 				class:on={settings.reducedMotion}
 				onclick={onMotion}
 				aria-label="Toggle reduced motion"
+			>
+				<span></span>
+			</button>
+		</div>
+
+		<div class="row">
+			<span class="icon">
+				<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+					<path
+						d="M11 21 V12a3 3 0 0 1 6 0v9"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="3"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M17 20v-7a3 3 0 0 1 6 0v8"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="3"
+						stroke-linecap="round"
+					/>
+					<path
+						d="M23 21v-5a3 3 0 0 1 6 0v9c0 5-4 9-9 9h-2c-3 0-5-1.6-6.4-4L7 21.5a2.8 2.8 0 0 1 4.7-3L14 22"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="3"
+						stroke-linejoin="round"
+					/>
+					<path
+						d="M5 9 H2 M30 9 H33"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="3"
+						stroke-linecap="round"
+						opacity="0.45"
+					/>
+				</svg>
+			</span>
+			<span class="label">{labels.advanced}</span>
+			<button
+				class="switch"
+				class:on={settings.advancedDriving}
+				onclick={onAdvanced}
+				aria-label="Toggle advanced driving"
 			>
 				<span></span>
 			</button>

@@ -4,11 +4,13 @@
 
 	let {
 		hud,
+		advanced = false,
 		onSteer,
 		onBoost,
 		onPause
 	}: {
 		hud: HudState;
+		advanced?: boolean;
 		onSteer: (value: number) => void;
 		onBoost: () => void;
 		onPause: () => void;
@@ -17,6 +19,9 @@
 	let leftDown = $state(false);
 	let rightDown = $state(false);
 	let lastPhase = $state<string | null>(null);
+	let dragPointer: number | null = $state(null);
+	let dragOffset = $state(0);
+	let dragValue = $state(0);
 
 	$effect(() => {
 		if (hud.phase !== lastPhase) {
@@ -24,6 +29,9 @@
 			if (hud.phase === 'countdown' || hud.phase === 'finished') {
 				leftDown = false;
 				rightDown = false;
+				dragPointer = null;
+				dragOffset = 0;
+				dragValue = 0;
 				onSteer(0);
 			}
 		}
@@ -52,6 +60,52 @@
 		leftDown = false;
 		rightDown = false;
 		onSteer(0);
+	}
+
+	const DRAG_DEAD_ZONE = 6;
+	const DRAG_FULL_LOCK = 64;
+
+	function dragStart(event: PointerEvent) {
+		if (!advanced || event.button > 0) return;
+		event.preventDefault();
+		dragPointer = event.pointerId;
+		dragOffset = event.clientX;
+		dragValue = 0;
+		(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+	}
+
+	function dragMove(event: PointerEvent) {
+		if (!advanced || dragPointer !== event.pointerId) return;
+		event.preventDefault();
+		const dx = event.clientX - dragOffset;
+		const magnitude = Math.abs(dx);
+		// A small dead zone keeps the car straight when the thumb rests, and
+		// 64 px of travel is enough to reach full lock on a phone.
+		const value =
+			magnitude <= DRAG_DEAD_ZONE
+				? 0
+				: Math.sign(dx) * Math.min(1, (magnitude - DRAG_DEAD_ZONE) / DRAG_FULL_LOCK);
+		dragValue = value;
+		onSteer(value);
+	}
+
+	function dragEnd(event: PointerEvent) {
+		if (dragPointer !== event.pointerId) return;
+		dragPointer = null;
+		dragValue = 0;
+		onSteer(0);
+	}
+
+	function dragKey(event: KeyboardEvent, value: number | null) {
+		if (!advanced) return;
+		if (value === null) {
+			dragValue = 0;
+			onSteer(0);
+			return;
+		}
+		event.preventDefault();
+		dragValue = value;
+		onSteer(value);
 	}
 
 	function boostPress(event: PointerEvent) {
@@ -124,6 +178,30 @@
 	{/if}
 
 	<div class="bottom">
+		{#if advanced}
+			<div
+				class="drag-surface"
+				class:active={dragPointer !== null}
+				role="slider"
+				aria-label="Drag left or right to steer"
+				aria-orientation="horizontal"
+				aria-valuemin={-1}
+				aria-valuemax={1}
+				aria-valuenow={Math.round(dragValue * 100) / 100}
+				tabindex="0"
+				onkeydown={(e) =>
+					e.key === 'ArrowLeft' ? dragKey(e, -1) : e.key === 'ArrowRight' ? dragKey(e, 1) : null}
+				onkeyup={(e) =>
+					e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? dragKey(e, null) : null}
+				onpointerdown={dragStart}
+				onpointermove={dragMove}
+				onpointerup={dragEnd}
+				onpointercancel={dragEnd}
+				onlostpointercapture={dragEnd}
+			></div>
+		{/if}
+
+		{#if !advanced}
 		<button
 			class="steer left"
 			class:down={leftDown}
@@ -145,6 +223,7 @@
 				/>
 			</svg>
 		</button>
+		{/if}
 
 		<div class="boost-wrap">
 			<div class="meter" aria-label={`${hud.charges} boosts`}>
@@ -165,6 +244,7 @@
 			</button>
 		</div>
 
+		{#if !advanced}
 		<button
 			class="steer right"
 			class:down={rightDown}
@@ -186,6 +266,35 @@
 				/>
 			</svg>
 		</button>
+		{/if}
+
+		{#if advanced}
+			<div class="drag-hint" aria-hidden="true">
+				<svg viewBox="0 0 48 48" width="26" height="26">
+					<path
+						d="M30 10 L16 24 L30 38"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+				<div class="drag-track">
+					<span class="drag-knob" style={`transform: translateX(${dragValue * 34}px)`}></span>
+				</div>
+				<svg viewBox="0 0 48 48" width="26" height="26">
+					<path
+						d="M18 10 L32 24 L18 38"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</div>
+		{/if}
 	</div>
 
 	{#if hud.boostTime > 0}
@@ -412,6 +521,49 @@
 		background: var(--zt-yellow);
 	}
 
+	.drag-surface {
+		position: absolute;
+		inset: 0;
+		pointer-events: auto;
+		touch-action: none;
+	}
+
+	.drag-hint {
+		position: absolute;
+		bottom: calc(16px + var(--zt-safe-bottom));
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 14px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-cream) 78%, transparent);
+		box-shadow: 0 3px 0 var(--zt-shadow);
+		pointer-events: none;
+	}
+
+	.drag-track {
+		position: relative;
+		width: 96px;
+		height: 26px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-ink) 14%, transparent);
+	}
+
+	.drag-knob {
+		position: absolute;
+		top: 3px;
+		left: 50%;
+		width: 32px;
+		height: 20px;
+		margin-left: -16px;
+		border-radius: 999px;
+		background: var(--zt-teal);
+		box-shadow: inset 0 0 0 2px var(--zt-ink);
+		transition: transform 60ms linear;
+	}
+
 	.boost-wrap {
 		position: absolute;
 		bottom: calc(106px + var(--zt-safe-bottom));
@@ -503,7 +655,50 @@
 			width: 76px;
 			height: 76px;
 		}
-		.boost-wrap {
+		.drag-surface {
+		position: absolute;
+		inset: 0;
+		pointer-events: auto;
+		touch-action: none;
+	}
+
+	.drag-hint {
+		position: absolute;
+		bottom: calc(16px + var(--zt-safe-bottom));
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 14px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-cream) 78%, transparent);
+		box-shadow: 0 3px 0 var(--zt-shadow);
+		pointer-events: none;
+	}
+
+	.drag-track {
+		position: relative;
+		width: 96px;
+		height: 26px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-ink) 14%, transparent);
+	}
+
+	.drag-knob {
+		position: absolute;
+		top: 3px;
+		left: 50%;
+		width: 32px;
+		height: 20px;
+		margin-left: -16px;
+		border-radius: 999px;
+		background: var(--zt-teal);
+		box-shadow: inset 0 0 0 2px var(--zt-ink);
+		transition: transform 60ms linear;
+	}
+
+	.boost-wrap {
 			bottom: calc(94px + var(--zt-safe-bottom));
 		}
 		.boost-button {

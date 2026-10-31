@@ -4,7 +4,12 @@ import { createProfile, defaultSave, recordResult, resetProfile, syncProfile } f
 describe('save data', () => {
 	it('starts with three empty profile slots', () => {
 		expect(defaultSave().profiles).toEqual([null, null, null]);
-		expect(defaultSave().settings).toEqual({ sound: true, lang: 'it', reducedMotion: false });
+		expect(defaultSave().settings).toEqual({
+			sound: true,
+			lang: 'it',
+			reducedMotion: false,
+			advancedDriving: false
+		});
 	});
 
 	it('creates a profile with Bear available', () => {

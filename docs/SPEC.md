@@ -23,13 +23,13 @@ Splash (1.2 s, skippable by tap)
     → Garage (car choice; locked cars show star pips)
       → GO
         → Countdown 3-2-1-GO
-          → Race (2 laps)
+          → Race (3 laps)
             → Results overlay (stars, balloons, unlock)
               → Again | Home (garage)
 ```
 
 - **Pause overlay:** Resume · Restart · Sound · Home.
-- **Settings:** gear on the profile screen. Sound, language, reduced motion, reset current profile (3 s hold).
+- **Settings:** gear on the profile screen. Sound, language, reduced motion, advanced driving, reset current profile (3 s hold).
 - **Tutorial:** before the first race of each profile, over the countdown; skippable; replayable from pause.
 - **Maximum three taps to driving:** profile → car → GO.
 
@@ -58,26 +58,26 @@ Splash (1.2 s, skippable by tap)
 | --------------- | -------------------------------------------------------------------------------------------- |
 | Laps            | 2                                                                                            |
 | Target duration | ~73 s                                                                                        |
-| Cruise speed    | 11.5 m/s (~41 km/h); boost 1.4× for 2 s                                                      |
+| Cruise speed    | Assisted 11.5 m/s (~41 km/h); advanced 13.9 m/s (~50 km/h), drifting to 14.4 m/s (~52 km/h) on long straights. Boost 1.4× (advanced 1.15×) for 2 s |
 | Acceleration    | 6 m/s² to cruise                                                                             |
 | Steering        | 2.2 rad/s at low speed, easing to 1.6 rad/s at cruise                                        |
 | Steering assist | No permanent auto-follow; after 2 s of wall contact, auto-steer takes over and a badge appears |
 | Track width     | 8 m; car 1.4 m wide                                                                          |
-| Balloons        | 5 per lap, 10 per race, on the racing line                                                   |
+| Balloons        | 5 per lap, 15 per race, on the racing line                                                   |
 | Boost charges   | Each balloon +1; max 3 stored; one tap = 1 charge                                            |
 | Guardrail       | Clamp lateral offset; 10% target-speed reduction while touching; sparkle + boop              |
 | Auto-recover    | Stuck (<0.4 m/s for 2 s) or wrong-way (>1.5 s) → last safe point, facing forward; boost kept |
 | Rival contact   | Soft bump: separate laterally, no speed loss, no spin, no damage; AI avoids repeat contact   |
 | Rivals          | 3, rubber-banded, never collect balloons, never block                                        |
-| Finish          | Crossing the line after lap 2 → auto-brake, confetti, results                                |
+| Finish          | Crossing the line after lap 3 → auto-brake, confetti, results; balloons never end the race                                |
 
 ### Stars
 
 | Stars | Condition                       |
 | ----- | ------------------------------- |
-| 1     | Finish the race                 |
-| 2     | Finish with at least 5 balloons |
-| 3     | Finish with all 10 balloons     |
+| 1     | Finish the race                  |
+| 2     | Finish with at least 8 balloons  |
+| 3     | Finish with all 15 balloons      |
 
 - Stars are a **best-ever** rating per profile. A worse race never removes a star.
 - A perfect first race can unlock every car. That is intentional: no grind.
@@ -96,7 +96,7 @@ Splash (1.2 s, skippable by tap)
 
 ## 6. Tracks
 
-Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, two laps. The car starts at `t = 0`; the start line and gantry are at `t = 0.04`.
+Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps. The car starts at `t = 0`; the start line and gantry are at `t = 0.04`.
 
 | Circuit      | Length | Theme       | Signature |
 | ------------ | ------ | ----------- | --------- |
@@ -107,7 +107,15 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, two laps. 
 | Candy Hills  | 374 m  | candy       | wavy hills, giant lollipops and gumdrops |
 
 - The garage shows a mini-map picker; the selected circuit is saved per profile.
-- Balloon positions per lap are normalized at `t = 0.06, 0.24, 0.42, 0.60, 0.78`, alternating lateral offsets `-1.4, 0, +1.4, 0, -1.4`.
+- Balloon positions per lap are normalized at `t = 0.06, 0.24, 0.42, 0.60, 0.78`, alternating lateral offsets `-1.4, 0, +1.4, 0, -1.4`. Five balloons spawn on each of the three laps.
+
+### Advanced driving
+
+- Settings → Advanced replaces the two steer buttons with one-finger drag anywhere on the track: drag left to go left, drag right to go right. A 6 px dead zone keeps the car straight; 64 px of travel reaches full lock.
+- Advanced disables the auto-steer assist entirely. Wrong-way and stuck recovery stay on, because they prevent broken states rather than helping with steering.
+- Advanced speed: 50 km/h base, creeping to 52 km/h after 2.5 s of clean straight (no steering input, no rail contact). Hitting a rail drops the target to 65% (~32 km/h); the car brakes down to it and has to accelerate back.
+- Advanced boost is 1.15× (≈60 km/h, just inside the 60 km/h dial) instead of 1.4×.
+- The tutorial's first step switches to "drag your finger" copy when advanced is on.
 - Lap 2 balloons reuse the same positions but respawn; only the current lap's set is visible.
 - Each world has its own palette, houses, trees, hills, flowers, rocks, lamp posts, flags, clouds and landmark props. All scenery is non-collidable and instanced where repeated.
 - Guardrails are visual low curbs; collision is a mathematical lateral clamp that preserves the car's progress along the tangent, so it slides rather than pinning.
