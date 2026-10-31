@@ -9,8 +9,164 @@
 		<meta name="text-scale" content="scale" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		%sveltekit.head%
+		<style>
+			/* Inline on purpose: this must still render if a stylesheet fails to load. */
+			#zt-boot {
+				position: fixed;
+				inset: 0;
+				z-index: 9999;
+				display: grid;
+				place-items: center;
+				padding: 24px;
+				background: #7ec8f2;
+				font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+				color: #26313c;
+			}
+			#zt-boot[hidden] {
+				display: none !important;
+			}
+			.zt-boot-card {
+				width: min(360px, 100%);
+				padding: 22px;
+				border-radius: 22px;
+				background: #fff6e3;
+				box-shadow: 0 6px 0 rgb(38 49 60 / 0.18);
+				text-align: center;
+			}
+			.zt-boot-card h1 {
+				margin: 0 0 6px;
+				font-size: 22px;
+				line-height: 1.2;
+			}
+			.zt-boot-card p {
+				margin: 0 0 4px;
+				font-size: 15px;
+				opacity: 0.75;
+			}
+			.zt-boot-actions {
+				display: flex;
+				gap: 10px;
+				justify-content: center;
+				margin-top: 18px;
+			}
+			.zt-boot-actions button {
+				min-height: 52px;
+				padding: 0 18px;
+				border: 0;
+				border-radius: 14px;
+				background: #2fb8a6;
+				color: #fff6e3;
+				font: inherit;
+				font-weight: 700;
+				font-size: 16px;
+			}
+			.zt-boot-actions button.secondary {
+				background: #e9dfc7;
+				color: #26313c;
+			}
+			#zt-boot-detail {
+				margin-top: 14px;
+				font-size: 12px;
+				opacity: 0.55;
+				word-break: break-word;
+			}
+		</style>
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<div id="zt-boot" hidden>
+			<div class="zt-boot-card">
+				<h1>Il gioco non si è avviato.</h1>
+				<p>The game didn't start.</p>
+				<div class="zt-boot-actions">
+					<button type="button" onclick="location.reload()">Ricarica</button>
+					<button type="button" class="secondary" id="zt-boot-reset">Ripristina</button>
+				</div>
+				<p id="zt-boot-detail"></p>
+			</div>
+		</div>
+
+		<script>
+			(function () {
+				var shown = false;
+				function describe(value) {
+					if (!value) return '';
+					if (typeof value === 'string') return value;
+					if (value.message) return String(value.message);
+					try {
+						return String(value);
+					} catch (error) {
+						return '';
+					}
+				}
+				function show(reason) {
+					if (shown) return;
+					shown = true;
+					var panel = document.getElementById('zt-boot');
+					if (panel) panel.hidden = false;
+					var detail = document.getElementById('zt-boot-detail');
+					if (detail) detail.textContent = describe(reason);
+				}
+				window.addEventListener(
+					'error',
+					function (event) {
+						var target = event.target;
+						if (target && target.tagName === 'SCRIPT') {
+							show('script: ' + (target.src || 'inline'));
+							return;
+						}
+						show(event.error || event.message);
+					},
+					true
+				);
+				window.addEventListener('unhandledrejection', function (event) {
+					show(event.reason);
+				});
+				// If the app never mounts, surface it instead of leaving a dark screen.
+				window.setTimeout(function () {
+					if (!document.querySelector('.stage')) show('timeout: app did not mount');
+				}, 8000);
+				document.addEventListener('click', function (event) {
+					var target = event.target;
+					if (!target || target.id !== 'zt-boot-reset') return;
+					event.preventDefault();
+					(function () {
+						var jobs = [];
+						if ('serviceWorker' in navigator) {
+							jobs.push(
+								navigator.serviceWorker
+									.getRegistrations()
+									.then(function (regs) {
+										return Promise.all(
+											regs.map(function (reg) {
+												return reg.unregister();
+											})
+										);
+									})
+									.catch(function () {})
+							);
+						}
+						if (window.caches) {
+							jobs.push(
+								caches
+									.keys()
+									.then(function (keys) {
+										return Promise.all(
+											keys.map(function (key) {
+												return caches.delete(key);
+											})
+										);
+									})
+									.catch(function () {})
+							);
+						}
+						Promise.all(jobs).then(function () {
+							location.reload();
+						});
+					})();
+				});
+			})();
+		</script>
+
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

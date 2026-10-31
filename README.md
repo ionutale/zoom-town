@@ -55,4 +55,4 @@ The installed app opens full-screen in portrait, keeps its own icon, and works o
 
 ## Deploy
 
-`pnpm build` writes a static site to `build/`. Serve it with Cloudflare Workers static assets (Wrangler) or any static host with SPA fallback. The PWA manifest is portrait-only and the service worker precaches the shell and audio for offline play after the first load.
+`pnpm build` writes a static site to `build/`. Serve it with Cloudflare Workers static assets (Wrangler) or any static host with SPA fallback. The PWA manifest is portrait-only. `src/service-worker.ts` precaches every build chunk, font, and audio file under a per-build cache, serves navigations network-first with an offline fallback, and never caches HTML under a script URL. If the app fails to boot, a recovery card in `src/app.html` offers Reload and Reset instead of a black screen.

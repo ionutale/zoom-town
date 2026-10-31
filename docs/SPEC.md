@@ -195,7 +195,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
   - `src/lib/save.ts` — localStorage schema and migration.
   - `src/lib/styles/tokens.css` — colour and motion tokens.
 - **Static deploy:** `pnpm build` → `build/`, served by Cloudflare Workers static assets via Wrangler.
-- **PWA:** portrait manifest, generated icons, service worker that precaches the shell and all committed audio; installable and playable offline after the first load.
+- **PWA:** portrait manifest, generated icons, and a SvelteKit-built service worker (`src/service-worker.ts`) that precaches every build chunk, font, and committed audio file under a cache named after the build. Navigation is network-first with a 3 s timeout and falls back to the cached shell; immutable assets are cache-first. HTML is never cached under a script or style URL, and audio range requests bypass the worker. Installable and playable offline after the first load.
 - **iOS PWA:** `apple-mobile-web-app-capable`, `black-translucent` status bar, `Zoom Town` title, 152/167/180 touch icons, safe-area insets, `navigator.standalone` detection, and a custom install sheet. iOS Safari has no `beforeinstallprompt`, so the game shows a first-visit banner on the profile screen and keeps a Settings → Install app entry. The sheet explains Share → Add to Home Screen → Add, warns when the page is not in Safari, and stores “don’t show again”. Installed mode is full-screen, portrait, and offline.
 - **Tests:** Vitest for star/unlock/save/track math and iOS detection; Playwright for the portrait flow, a debug-driven race, all five circuits, persistence, audio asset loading, the iOS Safari install sheet, and screenshot baselines.
 

@@ -326,3 +326,48 @@ test('races three laps and does not end on balloons', async ({ page }) => {
 	await page.evaluate(() => (window as any).__zoomtown.finish(3));
 	await expect(page.getByLabel('3 of 3 stars')).toBeVisible();
 });
+
+test('boots offline from the precached build and shows a recovery card on failure', async ({
+	page,
+	context
+}) => {
+	await page.goto('/');
+	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+
+	await expect
+		.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 15_000 })
+		.toBe(true);
+
+	// Playwright's context.setOffline also disables service-worker handling, so
+	// cut the network through CDP instead: this is real offline behaviour.
+	const cdp = await context.newCDPSession(page);
+	await cdp.send('Network.enable');
+	await cdp.send('Network.emulateNetworkConditions', {
+		offline: true,
+		latency: 0,
+		downloadThroughput: 0,
+		uploadThroughput: 0
+	});
+	try {
+		await page.reload();
+		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+		await page.getByRole('button', { name: 'Profile 1' }).click();
+		await expect(page.getByRole('button', { name: 'Sunny Town' })).toBeVisible();
+	} finally {
+		await cdp.send('Network.emulateNetworkConditions', {
+			offline: false,
+			latency: 0,
+			downloadThroughput: -1,
+			uploadThroughput: -1
+		});
+	}
+
+	// A failed boot must never leave a black screen.
+	await page.evaluate(() => {
+		const event = new Event('unhandledrejection');
+		(event as unknown as { reason: unknown }).reason = new Error('e2e chunk failure');
+		window.dispatchEvent(event);
+	});
+	await expect(page.getByText('Il gioco non si è avviato.')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Ricarica' })).toBeVisible();
+});
