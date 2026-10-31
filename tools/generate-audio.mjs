@@ -237,7 +237,7 @@ async function generateMusic() {
 		mono: false,
 		bitrate: '112k',
 		normalize: true,
-		filters: ['afade=t=in:st=0:d=0.8', 'afade=t=out:st=44.2:d=0.8']
+		filters: ['afade=t=in:st=0:d=0.15', 'afade=t=out:st=44.85:d=0.15']
 	});
 	console.log(`  -> ${path.relative(ROOT, out)} (${take.seconds.toFixed(2)}s)`);
 }
