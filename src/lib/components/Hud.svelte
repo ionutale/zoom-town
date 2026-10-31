@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HudState } from '#lib/game/game';
+	import Speedometer from './Speedometer.svelte';
 
 	let {
 		hud,
@@ -88,6 +89,19 @@
 			</svg>
 		</button>
 	</div>
+
+	<Speedometer speed={hud.speedKmh} boosting={hud.boostTime > 0} />
+
+	{#if hud.autoSteer}
+		<div class="auto-steer" aria-label="Auto steering" aria-live="polite">
+			<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+				<circle cx="20" cy="20" r="13" fill="none" stroke="#26313C" stroke-width="3.2" />
+				<circle cx="20" cy="20" r="4" fill="#26313C" />
+				<path d="M20 24 V32 M8 17 H16 M24 17 H32" fill="none" stroke="#26313C" stroke-width="3.2" stroke-linecap="round" />
+			</svg>
+			<span>AUTO</span>
+		</div>
+	{/if}
 
 	<div class="ribbon" aria-hidden="true">
 		<div class="rail"></div>
@@ -260,6 +274,45 @@
 	}
 	.pause:active {
 		transform: translateY(3px) scale(0.96);
+	}
+
+	.auto-steer {
+		position: absolute;
+		top: calc(46px + var(--zt-safe-top));
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		padding: 5px 11px 5px 7px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-cream) 92%, transparent);
+		box-shadow:
+			0 3px 0 var(--zt-shadow),
+			inset 0 0 0 2px var(--zt-white);
+		color: var(--zt-ink);
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		animation: auto-in 360ms var(--zt-ease-boing) both;
+	}
+	.auto-steer svg {
+		animation: auto-wheel 1.8s ease-in-out infinite;
+	}
+	@keyframes auto-in {
+		from {
+			transform: translateX(-50%) scale(0.6);
+			opacity: 0;
+		}
+		to {
+			transform: translateX(-50%) scale(1);
+			opacity: 1;
+		}
+	}
+	@keyframes auto-wheel {
+		50% {
+			transform: rotate(-18deg);
+		}
 	}
 
 	.ribbon {

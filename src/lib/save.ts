@@ -1,4 +1,5 @@
 import { AVATARS, CARS, carsForStars, type AvatarId, type CarId } from './game/cars';
+import { DEFAULT_TRACK_ID, TRACK_DEFS, type TrackId } from './game/track';
 
 export type Lang = 'it' | 'en';
 
@@ -7,6 +8,7 @@ export interface ProfileData {
 	bestStars: number;
 	unlocked: CarId[];
 	selectedCar: CarId;
+	selectedTrack: TrackId;
 	tutorialSeen: boolean;
 	trophySeen: boolean;
 }
@@ -49,11 +51,15 @@ export function loadSave(): SaveData {
 			const selectedCar = unlocked.includes(p.selectedCar as CarId)
 				? (p.selectedCar as CarId)
 				: 'bear';
+			const selectedTrack = TRACK_DEFS.some((track) => track.id === p.selectedTrack)
+				? (p.selectedTrack as TrackId)
+				: DEFAULT_TRACK_ID;
 			return {
 				avatar: avatar as AvatarId,
 				bestStars,
 				unlocked,
 				selectedCar,
+				selectedTrack,
 				tutorialSeen: Boolean(p.tutorialSeen),
 				trophySeen: Boolean(p.trophySeen)
 			};
@@ -87,6 +93,7 @@ export function createProfile(slot: number, avatar: AvatarId): ProfileData {
 		bestStars: 0,
 		unlocked: carsForStars(0),
 		selectedCar: 'bear',
+		selectedTrack: DEFAULT_TRACK_ID,
 		tutorialSeen: false,
 		trophySeen: false
 	};

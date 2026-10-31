@@ -1,14 +1,7 @@
 import * as THREE from 'three';
 import { CAR_BY_ID, type CarId, type CarSpec } from './cars';
 import { COLORS } from './palette';
-import {
-	MAX_LATERAL,
-	START_T,
-	TRACK_LENGTH,
-	nearestSample,
-	sampleAt,
-	type TrackSample
-} from './track';
+import type { NearestResult, Track } from './track';
 
 export const CRUISE_SPEED = 11.5;
 export const BOOST_MULTIPLIER = 1.4;
@@ -188,9 +181,10 @@ function shortestAngle(angle: number): number {
 }
 
 export interface CarUpdate {
-	near: ReturnType<typeof nearestSample>;
+	near: NearestResult;
 	boostStarted: boolean;
 	railContact: boolean;
+	autoSteer: boolean;
 }
 
 export class PlayerCar {
@@ -212,15 +206,21 @@ export class PlayerCar {
 	safeTimer = 0;
 	safePos = new THREE.Vector3();
 	safeHeading = 0;
+	wallContactTime = 0;
+	autoSteerTime = 0;
+	autoSteering = false;
 
-	constructor(carId: CarId) {
+	track: Track;
+
+	constructor(carId: CarId, track: Track) {
+		this.track = track;
 		this.spec = CAR_BY_ID[carId];
 		this.visual = createCarVisual(this.spec, true);
 		this.reset();
 	}
 
 	reset(): void {
-		const s = sampleAt(START_T);
+		const s = this.track.sampleAt(this.track.startT);
 		this.pos.copy(s.pos);
 		this.heading = Math.atan2(s.tangent.x, s.tangent.z);
 		this.speed = 0;
@@ -237,6 +237,9 @@ export class PlayerCar {
 		this.safeTimer = 0;
 		this.safePos.copy(s.pos);
 		this.safeHeading = this.heading;
+		this.wallContactTime = 0;
+		this.autoSteerTime = 0;
+		this.autoSteering = false;
 		this.visual.group.position.copy(this.pos);
 		this.visual.group.rotation.y = this.heading;
 	}
@@ -260,11 +263,11 @@ export class PlayerCar {
 	}
 
 	get lapProgress(): number {
-		return THREE.MathUtils.clamp(this.raceDistance / TRACK_LENGTH, 0, 2);
+		return THREE.MathUtils.clamp(this.raceDistance / this.track.length, 0, 2);
 	}
 
 	update(dt: number, steer: number, frozen: boolean): CarUpdate {
-		const before = nearestSample(this.pos, this.prevIndex);
+		const before = this.track.nearestSample(this.pos, this.prevIndex);
 		const tangentHeading = Math.atan2(before.sample.tangent.x, before.sample.tangent.z);
 		const railContact = this.touchingRail;
 
@@ -286,7 +289,9 @@ export class PlayerCar {
 			this.heading -= steer * steerRate * dt;
 			this.steerVisual += (steer - this.steerVisual) * Math.min(1, dt * 10);
 
-			const assist = steer === 0 ? 3.6 : 0.12;
+			// No permanent auto-follow. The car only follows the tangent a tiny
+			// amount; the real auto-steer assist is earned by hitting a rail.
+			const assist = 0.08;
 			this.heading += shortestAngle(tangentHeading - this.heading) * Math.min(1, assist * dt);
 
 			const forwardX = Math.sin(this.heading);
@@ -294,8 +299,8 @@ export class PlayerCar {
 			this.pos.x += forwardX * this.speed * dt;
 			this.pos.z += forwardZ * this.speed * dt;
 
-			const near = nearestSample(this.pos, before.index);
-			if (Math.abs(near.lateral) > MAX_LATERAL) {
+			const near = this.track.nearestSample(this.pos, before.index);
+			if (Math.abs(near.lateral) > this.track.maxLateral) {
 				const sign = Math.sign(near.lateral) || 1;
 				// Keep the car's progress along the tangent; only remove the
 				// sideways overshoot. Snapping to the sample centre would pin
@@ -306,11 +311,11 @@ export class PlayerCar {
 				this.pos.x =
 					near.sample.pos.x +
 					near.sample.tangent.x * along +
-					near.sample.normal.x * MAX_LATERAL * sign;
+					near.sample.normal.x * this.track.maxLateral * sign;
 				this.pos.z =
 					near.sample.pos.z +
 					near.sample.tangent.z * along +
-					near.sample.normal.z * MAX_LATERAL * sign;
+					near.sample.normal.z * this.track.maxLateral * sign;
 				// Slide along the rail instead of pinning the car into it.
 				this.heading += shortestAngle(tangentHeading - this.heading) * 0.9;
 				this.touchingRail = true;
@@ -318,13 +323,31 @@ export class PlayerCar {
 				this.touchingRail = false;
 			}
 
-			const after = nearestSample(this.pos, near.index);
-			if (steer === 0 && Math.abs(after.lateral) > 0.35) {
-				// With no input, gently drift back to the racing line so a
-				// five-year-old is never parked against a rail.
-				const pull = Math.min(1, dt * 1.6);
-				this.pos.x += after.sample.normal.x * -after.lateral * pull;
-				this.pos.z += after.sample.normal.z * -after.lateral * pull;
+			const after = this.track.nearestSample(this.pos, near.index);
+
+			if (this.touchingRail) this.wallContactTime += dt;
+			else this.wallContactTime = Math.max(0, this.wallContactTime - dt * 2);
+
+			if (!this.autoSteering && this.wallContactTime >= 2) {
+				this.autoSteering = true;
+				this.autoSteerTime = 0;
+				this.wallContactTime = 0;
+			}
+
+			if (this.autoSteering) {
+				this.autoSteerTime += dt;
+				const lateral = this.track.nearestSample(this.pos, after.index).lateral;
+				// Take the wheel, align with the road and drift back to the
+				// centre. The badge in the HUD tells the child it is helping.
+				this.heading +=
+					shortestAngle(tangentHeading - this.heading) * Math.min(1, dt * 4.2);
+				const pull = Math.min(1, dt * 2.6);
+				this.pos.x += after.sample.normal.x * -lateral * pull;
+				this.pos.z += after.sample.normal.z * -lateral * pull;
+				if ((Math.abs(lateral) < 0.55 && this.autoSteerTime > 0.8) || this.autoSteerTime > 4) {
+					this.autoSteering = false;
+					this.wallContactTime = 0;
+				}
 			}
 			const forwardXNow = Math.sin(this.heading);
 			const forwardZNow = Math.cos(this.heading);
@@ -336,7 +359,7 @@ export class PlayerCar {
 			if (this.speed < 0.4) this.stuckTime += dt;
 			else this.stuckTime = 0;
 			this.safeTimer += dt;
-			if (this.safeTimer > 1 && Math.abs(after.lateral) < MAX_LATERAL - 0.6 && forwardDot > 0.5) {
+			if (this.safeTimer > 1 && Math.abs(after.lateral) < this.track.maxLateral - 0.6 && forwardDot > 0.5) {
 				this.safePos.copy(this.pos);
 				this.safeHeading = this.heading;
 				this.safeTimer = 0;
@@ -345,20 +368,21 @@ export class PlayerCar {
 				this.recover();
 				this.syncVisual(dt);
 				return {
-					near: nearestSample(this.pos, this.prevIndex),
+					near: this.track.nearestSample(this.pos, this.prevIndex),
 					boostStarted: false,
-					railContact: false
+					railContact: false,
+					autoSteer: this.autoSteering
 				};
 			}
 
 			let delta = after.sample.distance - before.sample.distance;
-			if (delta < -TRACK_LENGTH / 2) delta += TRACK_LENGTH;
-			if (delta > TRACK_LENGTH / 2) delta -= TRACK_LENGTH;
-			this.raceDistance = Math.min(TRACK_LENGTH * 2, this.raceDistance + delta);
-			this.lap = Math.min(2, Math.floor(this.raceDistance / TRACK_LENGTH) + 1);
+			if (delta < -this.track.length / 2) delta += this.track.length;
+			if (delta > this.track.length / 2) delta -= this.track.length;
+			this.raceDistance = Math.min(this.track.length * 2, this.raceDistance + delta);
+			this.lap = Math.min(2, Math.floor(this.raceDistance / this.track.length) + 1);
 
 			if (this.boostTime > 0) this.boostTime = Math.max(0, this.boostTime - dt);
-			if (this.raceDistance >= TRACK_LENGTH * 2) this.finished = true;
+			if (this.raceDistance >= this.track.length * 2) this.finished = true;
 			this.prevIndex = after.index;
 			this.syncVisual(dt);
 		} else if (frozen) {
@@ -372,9 +396,10 @@ export class PlayerCar {
 		}
 
 		return {
-			near: nearestSample(this.pos, this.prevIndex),
+			near: this.track.nearestSample(this.pos, this.prevIndex),
 			boostStarted: false,
-			railContact: this.touchingRail
+			railContact: this.touchingRail,
+			autoSteer: this.autoSteering
 		};
 	}
 
@@ -386,7 +411,7 @@ export class PlayerCar {
 		this.stuckTime = 0;
 		this.wrongWayTime = 0;
 		this.safeTimer = 0;
-		this.prevIndex = nearestSample(this.pos).index;
+		this.prevIndex = this.track.nearestSample(this.pos).index;
 	}
 
 	syncVisual(dt: number): void {

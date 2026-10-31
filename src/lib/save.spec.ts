@@ -12,6 +12,7 @@ describe('save data', () => {
 		expect(profile.bestStars).toBe(0);
 		expect(profile.unlocked).toEqual(['bear']);
 		expect(profile.selectedCar).toBe('bear');
+		expect(profile.selectedTrack).toBe('sunny-town');
 	});
 
 	it('syncs unlocks to the best star count', () => {

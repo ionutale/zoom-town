@@ -1,11 +1,18 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "zoom-town",
+	"workers_dev": true,
 	"compatibility_date": "2026-10-31",
 	"assets": {
 		"directory": "./build",
 		"not_found_handling": "single-page-application"
 	},
+	"routes": [
+		{
+			"pattern": "zoom-town.aiu-media.com",
+			"custom_domain": true
+		}
+	],
 	"observability": {
 		"enabled": true
 	}

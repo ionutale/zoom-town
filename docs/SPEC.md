@@ -11,7 +11,7 @@ A five-year-old can open Zoom Town, pick a shape, pick a car, and finish a race 
 ## 2. Non-goals for v1
 
 - Ages 8–10 difficulty, time attack, endless mode, free drive, multiplayer.
-- More than one track, track variants, car performance stats, car upgrades, currency, shop, ads, accounts, analytics, chat, user-generated content.
+- More than five tracks, track variants, car performance stats, car upgrades, currency, shop, ads, accounts, analytics, chat, user-generated content.
 - Landscape play, left-handed layout mode (the controls are already symmetric), external art or music files.
 - Any runtime network request after the first load.
 
@@ -42,6 +42,8 @@ Splash (1.2 s, skippable by tap)
 | Boost         | bottom-centre, above steer row | Tap to spend one charge; 2 s burst          |
 | Pause         | top-right, 56 px               | Free pause; auto-pause on focus loss        |
 | Track ribbon  | left edge, 60% height          | Player and rival dots                       |
+| Speedometer   | bottom-right, above steer       | Arc, needle and km/h digits                 |
+| AUTO badge    | top-centre, under lap pips      | Steering-wheel icon while auto-steer is active |
 | Balloon count | top-left                       | Icon + 10 small dots                        |
 | Lap pips      | top-centre                     | Two rings; fill gold when the lap completes |
 
@@ -59,7 +61,7 @@ Splash (1.2 s, skippable by tap)
 | Cruise speed    | 11.5 m/s (~41 km/h); boost 1.4× for 2 s                                                      |
 | Acceleration    | 6 m/s² to cruise                                                                             |
 | Steering        | 2.2 rad/s at low speed, easing to 1.6 rad/s at cruise                                        |
-| Steering assist | Strong auto-centre on release; gentle lateral pull back to the racing line                   |
+| Steering assist | No permanent auto-follow; after 2 s of wall contact, auto-steer takes over and a badge appears |
 | Track width     | 8 m; car 1.4 m wide                                                                          |
 | Balloons        | 5 per lap, 10 per race, on the racing line                                                   |
 | Boost charges   | Each balloon +1; max 3 stored; one tap = 1 charge                                            |
@@ -92,43 +94,24 @@ Splash (1.2 s, skippable by tap)
 - All cars are cosmetic: identical speed, acceleration, steering, and boost.
 - Trophy: 3 stars + all four cars unlocked. Show once per profile, then free replay.
 
-## 6. Track
+## 6. Tracks
 
-One closed loop, clockwise, ~456 m, ten corners, 8 m wide. The layout has an early S-curve, a long right-hand sweep, a bottom hairpin, a chicane, and a final left kink.
+Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, two laps. The car starts at `t = 0`; the start line and gantry are at `t = 0.04`.
 
-**Control points** (x, z), used as a closed Catmull-Rom spline:
+| Circuit      | Length | Theme       | Signature |
+| ------------ | ------ | ----------- | --------- |
+| Sunny Town   | 456 m  | toy town    | early S, right sweep, esses, bottom hairpin, left kink |
+| Park Loop    | 353 m  | park        | flowing park curves, pond, bandstand, wooden bridge |
+| Harbor Dash  | 431 m  | harbour     | long start straight, lighthouse, dock, boats |
+| Dino Valley  | 392 m  | prehistoric | twisty valley, volcano, ferns, bone arch |
+| Candy Hills  | 374 m  | candy       | wavy hills, giant lollipops and gumdrops |
 
-```
-(-76, 58)  start/finish straight
-(-48, 60)
-(-24, 54)  first S
-( -2, 60)
-( 18, 54)
-( 44, 48)
-( 64, 38)
-( 78, 24)  right-hand sweep
-( 82,  6)
-( 76, -12)
-( 62, -26)
-( 44, -34)
-( 24, -32)  esses
-(  8, -38)
-( -6, -50)
-(-24, -54)  bottom hairpin
-(-40, -46)
-(-50, -30)
-(-54, -10)  left kink
-(-66,   2)
-(-78,  16)
-```
-
-**Landmarks, in order:** start gantry → first S-curve → duck fountain on the right sweep → park straight → wooden bridge over the stream → esses → bottom hairpin → toy shop on the top straight → home straight.
-
-- Start line at `t = 0.04`, car starts at `t = 0`.
-- Balloon positions per lap at `t = 0.06, 0.24, 0.42, 0.60, 0.78`, alternating lateral offsets `-1.4, 0, +1.4, 0, -1.4`.
+- The garage shows a mini-map picker; the selected circuit is saved per profile.
+- Balloon positions per lap are normalized at `t = 0.06, 0.24, 0.42, 0.60, 0.78`, alternating lateral offsets `-1.4, 0, +1.4, 0, -1.4`.
 - Lap 2 balloons reuse the same positions but respawn; only the current lap's set is visible.
-- Scenery outside the track: park trees, benches, fountain, bridge, toy shop, houses. All non-collidable.
-- Guardrails are visual low curbs; collision is a mathematical lateral clamp that preserves the car's progress along the tangent, so it slides rather than pinning. With no input, a gentle centring force returns the car to the racing line.
+- Each world has its own palette, houses, trees, hills, flowers, rocks, lamp posts, flags, clouds and landmark props. All scenery is non-collidable and instanced where repeated.
+- Guardrails are visual low curbs; collision is a mathematical lateral clamp that preserves the car's progress along the tangent, so it slides rather than pinning.
+- **Auto-steer:** wall contact accumulates a timer. After 2 s of contact (with 2× decay when off the rail), auto-steer aligns the car to the road and centres it for up to 4 s. The HUD shows a steering-wheel **AUTO** badge while it is active. It is the only automatic steering in the game.
 
 ## 7. Camera
 
@@ -149,7 +132,7 @@ One closed loop, clockwise, ~456 m, ten corners, 8 m wide. The layout has an ear
 ## 9. Profiles & save
 
 - Three profile slots, each with a shape avatar (star, flower, moon), no names, no typing.
-- Per-profile data: best stars, unlocked cars, selected car, tutorial seen, trophy seen.
+- Per-profile data: best stars, unlocked cars, selected car, selected circuit, tutorial seen, trophy seen.
 - Device-wide settings: sound on/off, language (`it` default, `en`), reduced motion.
 - Storage: `localStorage`, JSON, `version: 1`. Key `zoomtown.save.v1`; a corrupt or missing save boots a fresh profile picker.
 - Reset current profile requires a 3 s hold with a filling ring and a spoken warning. Other profiles untouched.
@@ -193,7 +176,7 @@ One closed loop, clockwise, ~456 m, ten corners, 8 m wide. The layout has an ear
 - **Game loop** with `requestAnimationFrame`, fixed-step accumulator at 60 Hz for physics, render interpolation optional.
 - **State machine:** `boot → profile → garage → countdown → racing → paused → finished → results`.
 - **Modules:**
-  - `src/lib/game/track.ts` — spline, sampling, ribbon geometry, landmarks.
+  - `src/lib/game/track.ts` — five circuit definitions, track sampling, ribbon geometry, themed scenery and landmarks.
   - `src/lib/game/car.ts` — car model, physics, boost, guardrail.
   - `src/lib/game/rivals.ts` — spline followers, rubber-band, bump.
   - `src/lib/game/camera.ts` — chase camera, look-ahead, calm mode.
@@ -206,7 +189,7 @@ One closed loop, clockwise, ~456 m, ten corners, 8 m wide. The layout has an ear
 - **Static deploy:** `pnpm build` → `build/`, served by Cloudflare Workers static assets via Wrangler.
 - **PWA:** portrait manifest, generated icons, service worker that precaches the shell and all committed audio; installable and playable offline after the first load.
 - **iOS PWA:** `apple-mobile-web-app-capable`, `black-translucent` status bar, `Zoom Town` title, 152/167/180 touch icons, safe-area insets, `navigator.standalone` detection, and a custom install sheet. iOS Safari has no `beforeinstallprompt`, so the game shows a first-visit banner on the profile screen and keeps a Settings → Install app entry. The sheet explains Share → Add to Home Screen → Add, warns when the page is not in Safari, and stores “don’t show again”. Installed mode is full-screen, portrait, and offline.
-- **Tests:** Vitest for star/unlock/save/track math and iOS detection; Playwright for the portrait flow, a debug-driven race, persistence, audio asset loading, the iOS Safari install sheet, and screenshot baselines.
+- **Tests:** Vitest for star/unlock/save/track math and iOS detection; Playwright for the portrait flow, a debug-driven race, all five circuits, persistence, audio asset loading, the iOS Safari install sheet, and screenshot baselines.
 
 ## 14. Performance & quality bar
 

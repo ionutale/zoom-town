@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { AVATARS, CAR_BY_ID, type CarId } from '#lib/game/cars';
+	import { DEFAULT_TRACK_ID, TRACK_DEFS, type TrackId } from '#lib/game/track';
 	import { ZoomTownGame, type HudState, type RaceResult } from '#lib/game/game';
 	import {
 		createProfile,
@@ -56,6 +57,7 @@
 
 	let profile = $derived(slot !== null ? save.profiles[slot] : null);
 	let selectedCar = $derived(profile?.selectedCar ?? 'bear');
+	let selectedTrack = $derived(profile?.selectedTrack ?? DEFAULT_TRACK_ID);
 	let newCarSpec = $derived(newCarId ? CAR_BY_ID[newCarId] : null);
 
 	function blankHud(carId: CarId = 'bear'): HudState {
@@ -68,9 +70,11 @@
 			charges: 0,
 			maxCharges: 3,
 			boostTime: 0,
+			speedKmh: 0,
 			countdown: 0,
 			playerProgress: 0,
 			rivalProgress: [0, 0, 0],
+			autoSteer: false,
 			carId,
 			carColor: CAR_BY_ID[carId].color
 		};
@@ -90,19 +94,22 @@
 			installDismissed = false;
 		}
 		document.documentElement.classList.toggle('reduced-motion', save.settings.reducedMotion);
-		const initialCar = save.profiles.find((p) => p !== null)?.selectedCar ?? 'bear';
+		const existingProfile = save.profiles.find((p) => p !== null);
+		const initialCar = existingProfile?.selectedCar ?? 'bear';
+		const initialTrack = existingProfile?.selectedTrack ?? DEFAULT_TRACK_ID;
 		game = new ZoomTownGame({
 			canvas,
 			carId: initialCar,
 			sound: save.settings.sound,
 			reducedMotion: save.settings.reducedMotion,
 			lang: save.settings.lang,
+			trackId: initialTrack,
 			onHud: (state) => (hud = state),
 			onFinish: handleFinish,
 			onPickup: () => navigator.vibrate?.(8),
 			onBump: () => navigator.vibrate?.(16)
 		});
-		game.attract(initialCar);
+		game.attract(initialCar, initialTrack);
 
 		const rotateQuery = window.matchMedia('(orientation: landscape) and (pointer: coarse)');
 		const updateRotate = () => {
@@ -126,13 +133,13 @@
 			steer: (value: number) => game?.setSteer(value),
 			boost: () => game?.requestBoost(),
 			skipCountdown: () => game?.debugSkipCountdown(),
-			start: (car: CarId = 'bear') => {
+			start: (car: CarId = 'bear', track: TrackId = selectedTrack) => {
 				if (slot === null) selectProfile(0);
 				screen = 'race';
 				result = null;
 				paused = false;
 				tutorialOpen = false;
-				game?.startRace(car);
+				game?.startRace(car, track);
 			},
 			save: () => save,
 			screen: () => screen
@@ -162,7 +169,7 @@
 		screen = 'garage';
 		game?.unlockAudio();
 		game?.playSfx('click');
-		game?.attract(next.selectedCar);
+		game?.attract(next.selectedCar, next.selectedTrack);
 	}
 
 	function pickCar(id: CarId) {
@@ -173,7 +180,18 @@
 		save = { ...save, profiles };
 		storeSave(save);
 		game?.playSfx('click');
-		game?.attract(id);
+		game?.attract(id, selectedTrack);
+	}
+
+	function pickTrack(id: TrackId) {
+		if (slot === null || !profile) return;
+		const updated = { ...profile, selectedTrack: id };
+		const profiles = [...save.profiles];
+		profiles[slot] = updated;
+		save = { ...save, profiles };
+		storeSave(save);
+		game?.playSfx('click');
+		game?.attract(selectedCar, id);
 	}
 
 	function backToProfiles() {
@@ -211,7 +229,7 @@
 		settingsOpen = false;
 		screen = 'race';
 		markTutorialSeen();
-		game?.startRace(selectedCar);
+		game?.startRace(selectedCar, selectedTrack);
 		void enterImmersive();
 	}
 
@@ -272,7 +290,7 @@
 		newCarId = null;
 		trophy = false;
 		paused = false;
-		game?.startRace(selectedCar);
+		game?.startRace(selectedCar, selectedTrack);
 		void requestWakeLock();
 	}
 
@@ -282,7 +300,7 @@
 		trophy = false;
 		paused = false;
 		screen = 'garage';
-		game?.attract(selectedCar);
+		game?.attract(selectedCar, selectedTrack);
 		releaseWakeLock();
 	}
 
@@ -304,7 +322,7 @@
 		result = null;
 		newCarId = null;
 		trophy = false;
-		game?.startRace(selectedCar);
+		game?.startRace(selectedCar, selectedTrack);
 		void requestWakeLock();
 	}
 
@@ -394,7 +412,9 @@
 		{:else if screen === 'garage' && profile}
 			<Garage
 				{profile}
+				{selectedTrack}
 				onPick={pickCar}
+				onTrack={pickTrack}
 				onGo={go}
 				onBack={backToProfiles}
 				onSettings={() => (settingsOpen = true)}

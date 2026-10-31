@@ -1,4 +1,4 @@
-const CACHE = 'zoom-town-v4';
+const CACHE = 'zoom-town-v6';
 const SHELL = [
 	'/',
 	'/manifest.webmanifest',

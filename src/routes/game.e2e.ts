@@ -11,9 +11,11 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 	expect(await page.evaluate(() => (window as any).__zoomtown.screen())).toBe('profiles');
+	await page.getByRole('button', { name: 'Profile 1' }).click();
+	await expect(page.getByRole('button', { name: 'Park Loop' })).toBeVisible();
 
 	await page.evaluate(() => {
-		(window as any).__zoomtown.start('bear');
+		(window as any).__zoomtown.start('bear', 'park-loop');
 		(window as any).__zoomtown.skipCountdown();
 	});
 	await page.waitForTimeout(800);
@@ -21,6 +23,8 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 	expect(state.phase).toBe('racing');
 	expect(state.audioReady).toBe(true);
 	expect(state.rivalCount).toBe(3);
+	expect(state.track).toBe('park-loop');
+	await expect(page.getByLabel(/Speed/)).toBeVisible();
 
 	await page.evaluate(() => (window as any).__zoomtown.steer(1));
 	await page.waitForTimeout(600);

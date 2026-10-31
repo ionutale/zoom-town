@@ -70,9 +70,10 @@ Source of truth for the web UI: `src/lib/styles/tokens.css` (`--zt-*`). Three.js
 
 ## 5. World
 
-- **Track:** one closed loop, ~456 m, ten corners (S-curve, sweeps, chicane, hairpin), 8 m wide (about four car widths).
+- **Tracks:** five closed loops, 353–456 m, 8 m wide (about four car widths): Sunny Town, Park Loop, Harbor Dash, Dino Valley, Candy Hills. Each has its own palette, landmark, and scenery set.
 - **Landmarks, in order:** start gantry → first S-curve → duck fountain on the right sweep → park straight → wooden bridge → esses → bottom hairpin → toy shop on the top straight → home straight.
 - **Start gantry:** two cream posts, red-and-white striped beam, three balloon-shaped lamps, placed 18 m ahead of the car so the camera never starts inside the beam.
+- **Scenery props:** instanced hills, trees, houses, flowers, rocks, lamp posts, flags and clouds; per-theme landmarks (fountain/toy shop, pond/bandstand, lighthouse/boats, volcano/bones, lollipops/gumdrops).
 - **Fountain:** round two-tier basin, duck on top, water rings, four benches.
 - **Park:** eight trees, six lamp posts, a bandstand, balloons tied to two benches.
 - **Bridge:** wooden planks, low rails, stream underneath, two ducks.
@@ -124,6 +125,8 @@ Source of truth for the web UI: `src/lib/styles/tokens.css` (`--zt-*`). Three.js
 - **Top row:** pause (top-right, 56 px), balloon count (top-left, balloon icon + 0–10 dots), lap pips (top-centre, two cream rings that fill gold).
 - **Track ribbon:** 12 px wide, left edge, 60% of screen height, cream with ink ticks; player dot is the car colour with a white ring; rivals are 8 px dots.
 - **Boost meter:** three chunky segments above the boost button; filled `--zt-teal`, empty cream. The button is 84 px, always visible, dimmed below one charge.
+- **Speedometer:** compact cream gauge above the right steer button; teal arc, red needle, km/h digits, boost glow. Never covers the car.
+- **AUTO badge:** top-centre under the lap pips; steering-wheel icon plus AUTO, only while auto-steer is active.
 - **Steer buttons:** 88 px circles in the bottom corners, cream with ink arrows; pressed state sinks 3 px and turns `--zt-yellow`.
 - **Results:** cream card with three stars, balloon tally as icons, one unlocked-car card, two big buttons: “Again” (circular arrow) and “Home” (house). Text is decoration; icons carry meaning.
 - **Settings:** picture rows, 64 px targets, no typing. Reset uses a 3-second hold with a filling red ring and a spoken warning.

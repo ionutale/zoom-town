@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { COLORS } from './palette';
-import { sampleAt } from './track';
+import type { Track } from './track';
 
 const BALLOON_TS = [0.06, 0.24, 0.42, 0.6, 0.78];
 const BALLOON_LANES = [-1.4, 0, 1.4, 0, -1.4];
@@ -37,8 +37,10 @@ export class Balloons {
 	time = 0;
 	currentLap = 1;
 	readonly root = new THREE.Group();
+	track: Track;
 
-	constructor() {
+	constructor(track: Track) {
+		this.track = track;
 		for (let lap = 1; lap <= 2; lap++) {
 			for (let i = 0; i < BALLOON_TS.length; i++) {
 				const color = BALLOON_COLORS[i % BALLOON_COLORS.length];
@@ -121,7 +123,7 @@ export class Balloons {
 	}
 
 	place(item: BalloonItem): void {
-		const s = sampleAt(item.t);
+		const s = this.track.sampleAt(item.t);
 		item.group.position.set(
 			s.pos.x + s.normal.x * item.lane,
 			1.35,

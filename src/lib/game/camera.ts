@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { PlayerCar } from './car';
-import { sampleAt, type NearestResult } from './track';
+import type { NearestResult, Track } from './track';
 
 export class ChaseCamera {
 	camera: THREE.PerspectiveCamera;
@@ -10,18 +10,25 @@ export class ChaseCamera {
 	private targetLook = new THREE.Vector3();
 	private currentLook = new THREE.Vector3();
 	private orbit = 0;
+	track: Track;
 
-	constructor(aspect: number) {
+	constructor(track: Track, aspect: number) {
+		this.track = track;
 		this.camera = new THREE.PerspectiveCamera(68, aspect, 0.1, 220);
 		this.camera.position.set(0, 10, 24);
 		this.camera.lookAt(0, 0, 0);
 		this.resetAttract();
 	}
 
+	setTrack(track: Track): void {
+		this.track = track;
+		this.resetAttract();
+	}
+
 	resetAttract(): void {
 		this.mode = 'attract';
 		this.orbit = 0.6;
-		const center = sampleAt(0.01).pos;
+		const center = this.track.sampleAt(0.01).pos;
 		this.targetPos.set(
 			center.x + Math.sin(this.orbit) * 19,
 			10,
@@ -44,7 +51,7 @@ export class ChaseCamera {
 	update(dt: number, car: PlayerCar | null, near: NearestResult | null, boosting: boolean): void {
 		if (this.mode === 'attract') {
 			this.orbit += dt * 0.12;
-			const center = sampleAt(0.01).pos;
+			const center = this.track.sampleAt(0.01).pos;
 			this.targetPos.set(
 				center.x + Math.sin(this.orbit) * 19,
 				9.5,

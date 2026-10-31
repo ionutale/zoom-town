@@ -8,7 +8,14 @@ import type { CarId } from './cars';
 import { Effects } from './effects';
 import { COLORS } from './palette';
 import { createRivals, type Rival } from './rivals';
-import { TRACK_LENGTH, buildSceneryGroup, buildTrackGroup, nearestSample } from './track';
+import {
+	DEFAULT_TRACK_ID,
+	buildSceneryGroup,
+	buildTrackGroup,
+	getTrack,
+	type Track,
+	type TrackId
+} from './track';
 import type { Lang } from '#lib/save';
 
 export type GamePhase = 'attract' | 'countdown' | 'racing' | 'paused' | 'finished';
@@ -22,9 +29,11 @@ export interface HudState {
 	charges: number;
 	maxCharges: number;
 	boostTime: number;
+	speedKmh: number;
 	countdown: number;
 	playerProgress: number;
 	rivalProgress: number[];
+	autoSteer: boolean;
 	carId: CarId;
 	carColor: string;
 }
@@ -41,6 +50,7 @@ export interface GameOptions {
 	sound: boolean;
 	reducedMotion: boolean;
 	lang: Lang;
+	trackId?: TrackId;
 	onHud?: (state: HudState) => void;
 	onFinish?: (result: RaceResult) => void;
 	onPickup?: (total: number) => void;
@@ -52,8 +62,11 @@ export class ZoomTownGame {
 	private scene = new THREE.Scene();
 	private cameraRig: ChaseCamera;
 	private player: PlayerCar;
+	private track: Track;
+	private trackGroup: THREE.Group;
+	private sceneryGroup: THREE.Group;
 	private rivals: Rival[] = [];
-	private balloons = new Balloons();
+	private balloons: Balloons;
 	private effects = new Effects();
 	private audio: AudioEngine;
 	private options: GameOptions;
@@ -82,8 +95,9 @@ export class ZoomTownGame {
 		this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 		this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-		this.scene.background = new THREE.Color(COLORS.sky);
-		this.scene.fog = new THREE.Fog(COLORS.sky, 55, 160);
+		this.track = getTrack(options.trackId ?? DEFAULT_TRACK_ID);
+		this.scene.background = new THREE.Color(this.track.theme.sky);
+		this.scene.fog = new THREE.Fog(this.track.theme.sky, 55, 170);
 
 		this.scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 		const hemi = new THREE.HemisphereLight(COLORS.sky, COLORS.grass2, 1.25);
@@ -92,15 +106,17 @@ export class ZoomTownGame {
 		sun.position.set(35, 55, 18);
 		this.scene.add(sun);
 
-		this.scene.add(buildTrackGroup());
-		this.scene.add(buildSceneryGroup());
+		this.trackGroup = buildTrackGroup(this.track);
+		this.sceneryGroup = buildSceneryGroup(this.track);
+		this.scene.add(this.trackGroup, this.sceneryGroup);
+		this.balloons = new Balloons(this.track);
 		this.scene.add(this.balloons.root);
 		this.scene.add(this.effects.root);
 
-		this.player = new PlayerCar(options.carId);
+		this.player = new PlayerCar(options.carId, this.track);
 		this.scene.add(this.player.visual.group);
 
-		this.cameraRig = new ChaseCamera(1);
+		this.cameraRig = new ChaseCamera(this.track, 1);
 		this.cameraRig.calm = options.reducedMotion;
 		this.audio.soundOn = options.sound;
 
@@ -116,7 +132,8 @@ export class ZoomTownGame {
 		this.emitHud(true);
 	}
 
-	attract(carId?: CarId): void {
+	attract(carId?: CarId, trackId?: TrackId): void {
+		if (trackId) this.setTrack(trackId);
 		if (carId && carId !== this.player.spec.id) this.replaceCar(carId);
 		this.player.reset();
 		this.clearRivals();
@@ -132,11 +149,12 @@ export class ZoomTownGame {
 		this.emitHud(true);
 	}
 
-	startRace(carId: CarId): void {
+	startRace(carId: CarId, trackId?: TrackId): void {
+		if (trackId) this.setTrack(trackId);
 		if (carId !== this.player.spec.id) this.replaceCar(carId);
 		this.player.reset();
 		this.clearRivals();
-		this.rivals = createRivals(carId);
+		this.rivals = createRivals(carId, this.track);
 		for (const rival of this.rivals) this.scene.add(rival.visual.group);
 		this.balloons.reset();
 		this.effects.clear();
@@ -146,7 +164,7 @@ export class ZoomTownGame {
 		this.lastLap = 1;
 		this.resultSent = false;
 		this.hudTimer = 0;
-		const near = nearestSample(this.player.pos, this.player.prevIndex);
+		const near = this.track.nearestSample(this.player.pos, this.player.prevIndex);
 		this.cameraRig.setChase(this.player, near);
 		void this.audio.unlock();
 		this.audio.startMusic();
@@ -176,8 +194,8 @@ export class ZoomTownGame {
 		this.emitHud(true);
 	}
 
-	restart(carId: CarId): void {
-		this.startRace(carId);
+	restart(carId: CarId, trackId?: TrackId): void {
+		this.startRace(carId, trackId);
 	}
 
 	setSteer(value: number): void {
@@ -259,7 +277,7 @@ export class ZoomTownGame {
 
 	debugFinish(stars = 3): void {
 		this.balloons.forceCollect(stars === 3 ? TOTAL_BALLOONS : stars === 2 ? TOTAL_BALLOONS / 2 : 0);
-		this.player.raceDistance = TRACK_LENGTH * 2;
+		this.player.raceDistance = this.track.length * 2;
 		this.player.lap = 2;
 		this.player.finished = true;
 		this.finishRace();
@@ -276,10 +294,13 @@ export class ZoomTownGame {
 			balloons: this.balloons.collectedTotal,
 			charges: this.player.charges,
 			steer: this.steer,
-			lateral: nearestSample(this.player.pos, this.player.prevIndex).lateral,
-			sampleDistance: nearestSample(this.player.pos, this.player.prevIndex).sample.distance,
+			lateral: this.track.nearestSample(this.player.pos, this.player.prevIndex).lateral,
+			sampleDistance: this.track.nearestSample(this.player.pos, this.player.prevIndex).sample.distance,
+			track: this.track.def.id,
 			prevIndex: this.player.prevIndex,
 			touchingRail: this.player.touchingRail,
+			autoSteer: this.player.autoSteering,
+			wallContactTime: this.player.wallContactTime,
 			rivalCount: this.rivals.length,
 			rivals: this.rivals.map((rival) => ({
 				id: rival.id,
@@ -294,9 +315,44 @@ export class ZoomTownGame {
 		};
 	}
 
+
+	setTrack(trackId: TrackId): void {
+		if (this.track.def.id === trackId) return;
+		this.clearRivals();
+		this.player.visual.group.removeFromParent();
+		this.balloons.root.removeFromParent();
+		this.trackGroup.removeFromParent();
+		this.sceneryGroup.removeFromParent();
+		this.disposeGroup(this.trackGroup);
+		this.disposeGroup(this.sceneryGroup);
+
+		this.track = getTrack(trackId);
+		this.trackGroup = buildTrackGroup(this.track);
+		this.sceneryGroup = buildSceneryGroup(this.track);
+		this.scene.add(this.trackGroup, this.sceneryGroup);
+		this.scene.background = new THREE.Color(this.track.theme.sky);
+		this.scene.fog = new THREE.Fog(this.track.theme.sky, 55, 170);
+
+		this.balloons = new Balloons(this.track);
+		this.scene.add(this.balloons.root);
+		this.player = new PlayerCar(this.player.spec.id, this.track);
+		this.scene.add(this.player.visual.group);
+		this.cameraRig.setTrack(this.track);
+		this.effects.clear();
+	}
+
+	private disposeGroup(group: THREE.Group): void {
+		group.traverse((object) => {
+			if (!(object instanceof THREE.Mesh)) return;
+			object.geometry.dispose();
+			const materials = Array.isArray(object.material) ? object.material : [object.material];
+			for (const material of materials) material.dispose();
+		});
+	}
+
 	private replaceCar(carId: CarId): void {
 		this.player.visual.group.removeFromParent();
-		this.player = new PlayerCar(carId);
+		this.player = new PlayerCar(carId, this.track);
 		this.scene.add(this.player.visual.group);
 	}
 
@@ -422,10 +478,10 @@ export class ZoomTownGame {
 		this.hudTimer += dt;
 		if (!force && this.hudTimer < 0.05) return;
 		this.hudTimer = 0;
-		const near = nearestSample(this.player.pos, this.player.prevIndex);
-		const playerProgress = Math.min(1, Math.max(0, this.player.raceDistance / (TRACK_LENGTH * 2)));
+		const near = this.track.nearestSample(this.player.pos, this.player.prevIndex);
+		const playerProgress = Math.min(1, Math.max(0, this.player.raceDistance / (this.track.length * 2)));
 		const rivalProgress = this.rivals.map((rival) =>
-			Math.min(1, Math.max(0, (rival.distance - rival.startDistance) / (TRACK_LENGTH * 2)))
+			Math.min(1, Math.max(0, (rival.distance - rival.startDistance) / (this.track.length * 2)))
 		);
 		this.options.onHud?.({
 			phase: this.phase,
@@ -436,9 +492,11 @@ export class ZoomTownGame {
 			charges: this.player.charges,
 			maxCharges: MAX_CHARGES,
 			boostTime: Math.max(0, this.player.boostTime / BOOST_DURATION),
+			speedKmh: this.player.speed * 3.6,
 			countdown: this.countdown,
 			playerProgress,
 			rivalProgress,
+			autoSteer: this.player.autoSteering,
 			carId: this.player.spec.id,
 			carColor: this.player.spec.color
 		});

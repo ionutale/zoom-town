@@ -1,19 +1,25 @@
 <script lang="ts">
 	import { CARS, isCarUnlocked, type CarId } from '#lib/game/cars';
+	import type { TrackId } from '#lib/game/track';
 	import type { ProfileData } from '#lib/save';
 	import AvatarIcon from './AvatarIcon.svelte';
 	import CarIcon from './CarIcon.svelte';
 	import StarRow from './StarRow.svelte';
+	import TrackPicker from './TrackPicker.svelte';
 
 	let {
 		profile,
+		selectedTrack,
 		onPick,
+		onTrack,
 		onGo,
 		onBack,
 		onSettings
 	}: {
 		profile: ProfileData;
+		selectedTrack: TrackId;
 		onPick: (id: CarId) => void;
+		onTrack: (id: TrackId) => void;
 		onGo: () => void;
 		onBack: () => void;
 		onSettings: () => void;
@@ -114,6 +120,8 @@
 		{/each}
 	</div>
 
+	<TrackPicker selected={selectedTrack} onPick={onTrack} />
+
 	<button class="go" onclick={onGo} aria-label="Race">
 		<svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
 			<path d="M17 10 L38 24 L17 38 Z" fill="#26313C" />
@@ -176,7 +184,7 @@
 		grid-template-columns: 1fr 1fr;
 		grid-template-rows: 1fr 1fr;
 		gap: 12px;
-		margin: 16px 0 12px;
+		margin: 10px 0 6px;
 		min-height: 0;
 	}
 	.car-card {
@@ -247,8 +255,9 @@
 	.go {
 		position: relative;
 		align-self: center;
-		width: 96px;
-		height: 96px;
+		margin-top: 5px;
+		width: 88px;
+		height: 88px;
 		display: grid;
 		place-items: center;
 		border-radius: 50%;

@@ -1,8 +1,8 @@
 # Zoom Town
 
-A portrait-first 3D toy-town racer for children aged 5–7. The car drives itself, the child steers, pops balloons, and boosts. Nobody loses; stars unlock the four animal drivers.
+A portrait-first 3D toy-town racer for children aged 5–7. The car drives itself, the child steers, pops balloons, and boosts. Five themed circuits, a speedometer, auto-steer help after wall contact, and four animal drivers. Nobody loses; stars unlock the cars.
 
-**Live:** https://zoom-town.alexionutale.workers.dev
+**Live:** https://zoom-town.aiu-media.com (also https://zoom-town.alexionutale.workers.dev)
 
 ## Run
 

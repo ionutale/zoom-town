@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CAR_BY_ID, CARS, type CarId } from './cars';
 import { CRUISE_SPEED, createCarVisual, type PlayerCar } from './car';
-import { START_T, sampleAt, sampleAtDistance } from './track';
+import type { Track } from './track';
 
 const RIVAL_IDS: CarId[] = ['bear', 'bunny', 'fox', 'cat'];
 const LANES = [-2.25, 0, 2.25];
@@ -20,9 +20,11 @@ export class Rival {
 	cooldown = 0;
 	avoid = 0;
 	startDistance = 0;
+	track: Track;
 
-	constructor(id: CarId, index: number) {
+	constructor(id: CarId, index: number, track: Track) {
 		this.id = id;
+		this.track = track;
 		this.spec = CAR_BY_ID[id];
 		this.visual = createCarVisual(this.spec, false);
 		this.baseLane = LANES[index % LANES.length];
@@ -33,7 +35,7 @@ export class Rival {
 	}
 
 	reset(): void {
-		this.startDistance = sampleAt(START_T).distance;
+		this.startDistance = this.track.sampleAt(this.track.startT).distance;
 		this.distance = this.startDistance + this.startGap;
 		this.lane = this.baseLane;
 		this.avoid = 0;
@@ -42,7 +44,7 @@ export class Rival {
 	}
 
 	sync(): void {
-		const s = sampleAtDistance(this.distance);
+		const s = this.track.sampleAtDistance(this.distance);
 		this.visual.group.position.set(
 			s.pos.x + s.normal.x * this.lane,
 			0,
@@ -52,7 +54,7 @@ export class Rival {
 	}
 
 	update(dt: number, player: PlayerCar): void {
-		const s = sampleAtDistance(this.distance);
+		const s = this.track.sampleAtDistance(this.distance);
 		const playerPos = player.pos;
 		const dx = playerPos.x - s.pos.x;
 		const dz = playerPos.z - s.pos.z;
@@ -96,9 +98,9 @@ export class Rival {
 	}
 }
 
-export function createRivals(playerCarId: CarId): Rival[] {
+export function createRivals(playerCarId: CarId, track: Track): Rival[] {
 	const ids = RIVAL_IDS.filter((id) => id !== playerCarId).slice(0, 3);
-	return ids.map((id, index) => new Rival(id, index));
+	return ids.map((id, index) => new Rival(id, index, track));
 }
 
 export function allRivalIds(): CarId[] {

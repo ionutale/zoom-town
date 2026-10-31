@@ -37,7 +37,7 @@ One complete pass around the circuit. A race is two laps.
 _Avoid_: round, circuit, loop
 
 **Track**:
-The single sunny toy-town circuit, including its road, landmarks, and soft guardrails.
+One of five selectable toy circuits, including its road, theme, landmarks, and soft guardrails.
 _Avoid_: map, level, course
 
 **Guardrail**:
@@ -88,6 +88,14 @@ _Avoid_: onboarding, help, instructions
 A short spoken line that guides or celebrates, such as “Ready? Go!” or “Great driving!”.
 _Avoid_: voice-over, narration, prompt
 
+**Auto-steer**:
+The temporary steering help that takes over after two seconds of wall contact, centres the car, and shows an AUTO badge.
+_Avoid_: autopilot, assist mode, auto-drive
+
+**Speedometer**:
+The HUD gauge that shows the car's current speed in kilometres per hour.
+_Avoid_: dial, speed display
+
 **HUD**:
-The always-on race display: the vertical track ribbon, balloon count, lap pips, boost meter, and pause button.
+The always-on race display: the vertical track ribbon, balloon count, lap pips, boost meter, speedometer, and pause button.
 _Avoid_: UI, overlay, interface
