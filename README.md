@@ -43,6 +43,7 @@ All audio is generated locally and committed under `static/audio`; the game neve
 - [`ART-STYLE.md`](ART-STYLE.md) — palette, shapes, lighting, motion, HUD.
 - [`docs/SPEC.md`](docs/SPEC.md) — screens, rules, track, save schema, acceptance tests.
 - [`docs/adr/`](docs/adr/) — stack, portrait-only, no-loss design, code-built art and locally generated audio.
+- [`docs/DEVICE-TEST.md`](docs/DEVICE-TEST.md) — the five-minute iPhone pass: install, offline, laps, advanced driving, audio, layout.
 
 ## Install on iOS
 
