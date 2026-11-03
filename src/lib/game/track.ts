@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { buildDecorations } from './decorations';
 import { mergeMeshesByMaterial } from './merge';
 import { COLORS } from './palette';
 
@@ -559,6 +560,7 @@ export function buildSceneryGroup(track: Track): THREE.Group {
 	group.add(buildRocks(track, theme, rand));
 	group.add(buildClouds(track));
 	group.add(buildFlowers(track, theme, rand));
+	group.add(buildDecorations(track, theme, rand, nearStart));
 
 	switch (theme.accent) {
 		case COLORS.teal:

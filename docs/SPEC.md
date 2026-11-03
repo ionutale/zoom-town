@@ -117,7 +117,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 - Advanced boost is 1.15× (≈60 km/h, just inside the 60 km/h dial) instead of 1.4×.
 - The tutorial's first step switches to "drag your finger" copy when advanced is on.
 - Lap 2 balloons reuse the same positions but respawn; only the current lap's set is visible.
-- Each world has its own palette, houses, trees, hills, flowers, rocks, lamp posts, flags, clouds and landmark props. All scenery is non-collidable and instanced where repeated.
+- Each world has its own palette, houses, trees, hills, flowers, rocks, lamp posts, flags, clouds and landmark props. On top of that, every circuit gets bushes, roadside benches and three bird flocks, plus one signature prop set: a striped market stall (Sunny Town), picnic tables (Park Loop), crates and barrels (Harbor Dash), dinosaur nests with eggs (Dino Valley) and marshmallow piles (Candy Hills). All scenery is non-collidable, instanced where repeated, and merged per material (`src/lib/game/decorations.ts`).
 - Guardrails are visual low curbs; collision is a mathematical lateral clamp that preserves the car's progress along the tangent, so it slides rather than pinning.
 - **Auto-steer:** wall contact accumulates a timer. After 2 s of contact (with 2× decay when off the rail), auto-steer aligns the car to the road and centres it for up to 4 s. The HUD shows a steering-wheel **AUTO** badge while it is active. It is the only automatic steering in the game.
 
@@ -185,6 +185,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 - **State machine:** `boot → profile → garage → countdown → racing → paused → finished → results`.
 - **Modules:**
   - `src/lib/game/track.ts` — five circuit definitions, track sampling, ribbon geometry, themed scenery and landmarks.
+  - `src/lib/game/decorations.ts` — bushes, benches, bird flocks and the per-world decoration set.
   - `src/lib/game/car.ts` — car model, physics, boost, guardrail.
   - `src/lib/game/rivals.ts` — spline followers, rubber-band, bump.
   - `src/lib/game/camera.ts` — chase camera, look-ahead, calm mode.
