@@ -133,6 +133,8 @@
 		</svg>
 		<span class="go-ring"></span>
 	</button>
+
+	<p class="keys">{t.keyboardHint}</p>
 </div>
 
 <style>
@@ -281,6 +283,21 @@
 		border-radius: 50%;
 		border: 4px solid color-mix(in srgb, var(--zt-gold) 75%, transparent);
 		animation: ring-pulse 2.4s ease-in-out infinite;
+	}
+	/* Desktop-only hint: the game is a phone product, the laptop is for parents. */
+	.keys {
+		display: none;
+		margin-top: 6px;
+		text-align: center;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--zt-ink-soft);
+		opacity: 0.85;
+	}
+	@media (hover: hover) and (pointer: fine) and (min-height: 740px) {
+		.keys {
+			display: block;
+		}
 	}
 	@keyframes go-breathe {
 		50% {

@@ -23,6 +23,7 @@ export interface Messages {
 	pause: string;
 	paused: string;
 	raceTrack: string;
+	keyboardHint: string;
 	resume: string;
 	restart: string;
 	tutorial: string;
@@ -96,6 +97,7 @@ const IT: Messages = {
 	pause: 'Pausa',
 	paused: 'In pausa',
 	raceTrack: 'Pista di Zoom Town',
+	keyboardHint: 'Tastiera: ← → sterza · Spazio turbo · P pausa',
 	resume: 'Riprendi',
 	restart: 'Ricomincia',
 	tutorial: 'Tutorial',
@@ -168,6 +170,7 @@ const EN: Messages = {
 	pause: 'Pause',
 	paused: 'Paused',
 	raceTrack: 'Zoom Town race track',
+	keyboardHint: 'Keyboard: ← → steer · Space boost · P pause',
 	resume: 'Resume',
 	restart: 'Restart race',
 	tutorial: 'Tutorial',

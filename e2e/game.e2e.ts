@@ -252,9 +252,7 @@ test('speedometer shows live speed and the results screen disables the HUD', asy
 	await expect(page.getByRole('button', { name: 'Sunny Town' })).toBeVisible();
 });
 
-test('auto-steer badge appears after sustained rail contact and clears after release', async ({
-	page
-}) => {
+test('autopilot takes over after five idle seconds and clears on input', async ({ page }) => {
 	await openGarage(page);
 	await startRace(page, 'bear', 'park-loop');
 
@@ -262,29 +260,19 @@ test('auto-steer badge appears after sustained rail contact and clears after rel
 	await expect(autoBadge).toBeHidden();
 	expect((await debugState(page)).autoSteer).toBe(false);
 
-	// Hold full right until the car sits against the rail long enough to earn
-	// the assist; poll instead of guessing a fixed sleep.
-	await page.evaluate(() => (window as any).__zoomtown.steer(1));
+	// No steering input: the car drives itself after five quiet seconds.
 	await expect
-		.poll(async () => (await debugState(page)).wallContactTime, {
-			timeout: 10_000,
-			intervals: [100]
-		})
-		.toBeGreaterThan(0);
+		.poll(async () => (await debugState(page)).idleTime, { timeout: 12_000, intervals: [200] })
+		.toBeGreaterThan(5.2);
 	await expect
-		.poll(async () => (await debugState(page)).autoSteer, {
-			timeout: 15_000,
-			intervals: [100]
-		})
+		.poll(async () => (await debugState(page)).autoSteer, { timeout: 4000, intervals: [100] })
 		.toBe(true);
 	await expect(autoBadge).toBeVisible();
 
-	await page.evaluate(() => (window as any).__zoomtown.steer(0));
+	// Steering hands control back immediately — no timeout involved.
+	await page.evaluate(() => (window as any).__zoomtown.steer(1));
 	await expect
-		.poll(async () => (await debugState(page)).autoSteer, {
-			timeout: 8000,
-			intervals: [100]
-		})
+		.poll(async () => (await debugState(page)).autoSteer, { timeout: 4000, intervals: [100] })
 		.toBe(false);
 	await expect(autoBadge).toBeHidden();
 });
@@ -330,23 +318,17 @@ test.describe('advanced driving', () => {
 		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBe(0);
 	});
 
-	test('never engages auto-steer, even after wall contact', async ({ page }) => {
+	test('never engages autopilot, even when the child stops steering', async ({ page }) => {
 		await enableAdvanced(page);
 		await page.getByRole('button', { name: 'Profile 1' }).click();
 		await startRace(page, 'bear', 'park-loop');
 
-		await page.evaluate(() => (window as any).__zoomtown.steer(1));
+		// Long enough for the assisted autopilot to have taken over twice.
 		await expect
-			.poll(async () => (await debugState(page)).wallContactTime, {
-				timeout: 12_000,
-				intervals: [100]
-			})
-			.toBeGreaterThan(2.2);
+			.poll(async () => (await debugState(page)).idleTime, { timeout: 12_000, intervals: [200] })
+			.toBeGreaterThan(5.5);
 
-		// The assisted mode would have taken over by now; advanced must not.
-		await expect
-			.poll(async () => (await debugState(page)).autoSteer, { timeout: 3000, intervals: [100] })
-			.toBe(false);
+		expect((await debugState(page)).autoSteer).toBe(false);
 		await expect(page.getByLabel('Auto steering')).toHaveCount(0);
 	});
 
@@ -472,6 +454,49 @@ test('ships without the debug hook unless it is asked for', async ({ page }) => 
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 	expect(await page.evaluate(() => (window as any).__zoomtown)).toBeUndefined();
+});
+
+test('drives with the keyboard on a desktop', async ({ page }) => {
+	await openGarage(page);
+	await startRace(page, 'bear', 'park-loop');
+	// No button keeps focus after the debug start, so Space is the boost key.
+	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+	// Arrow keys steer while held, and releasing recentres.
+	await page.keyboard.down('ArrowRight');
+	await expect
+		.poll(async () => (await debugState(page)).steer, { timeout: 3000 })
+		.toBeGreaterThan(0.5);
+
+	await page.keyboard.down('ArrowLeft');
+	await expect.poll(async () => (await debugState(page)).steer, { timeout: 3000 }).toBe(0);
+
+	await page.keyboard.up('ArrowLeft');
+	await expect
+		.poll(async () => (await debugState(page)).steer, { timeout: 3000 })
+		.toBeGreaterThan(0.5);
+
+	await page.keyboard.up('ArrowRight');
+	await expect.poll(async () => (await debugState(page)).steer, { timeout: 3000 }).toBe(0);
+
+	// A is the left alias, and it must not double-fire.
+	await page.keyboard.down('a');
+	await expect
+		.poll(async () => (await debugState(page)).steer, { timeout: 3000 })
+		.toBeLessThan(-0.5);
+	await page.keyboard.up('a');
+
+	// Space spends one boost charge.
+	await page.evaluate(() => (window as any).__zoomtown.collectAll());
+	expect((await debugState(page)).charges).toBe(3);
+	await page.keyboard.press('Space');
+	await expect.poll(async () => (await debugState(page)).charges, { timeout: 3000 }).toBe(2);
+
+	// Escape pauses, P resumes.
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
+	await page.keyboard.press('p');
+	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
 });
 
 test('follows the saved language in the document and in the labels', async ({ page }) => {

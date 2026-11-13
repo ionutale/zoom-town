@@ -28,13 +28,17 @@ const RAIL_SLIDE_ALIGN = 0.9;
 const BRAKE_MULTIPLIER = 2.2;
 const COAST_BRAKE_MULTIPLIER = 2;
 
-/** Auto-steer assist (assisted mode only). */
-const ASSIST_TRIGGER_SECONDS = 2;
-const ASSIST_ALIGN_RATE = 4.2;
-const ASSIST_PULL_RATE = 2.6;
-const ASSIST_CENTRE_LATERAL = 0.55;
-const ASSIST_MIN_SECONDS = 0.8;
-const ASSIST_MAX_SECONDS = 4;
+/** Any steering beyond this counts as the child taking the wheel. */
+const STEER_INPUT_THRESHOLD = 0.05;
+
+/**
+ * Autopilot (assisted mode only): after this many seconds without steering
+ * input the car drives itself along the road. It hands control back on the
+ * first steering input and never times itself out.
+ */
+export const AUTOPILOT_IDLE_SECONDS = 5;
+const AUTOPILOT_ALIGN_RATE = 4.2;
+const AUTOPILOT_PULL_RATE = 2.6;
 
 /** Auto-recover thresholds. */
 const WRONG_WAY_DOT = -0.2;
@@ -290,13 +294,12 @@ export class PlayerCar {
 	safeTimer = 0;
 	safePos = new THREE.Vector3();
 	safeHeading = 0;
-	wallContactTime = 0;
-	autoSteerTime = 0;
+	idleTime = 0;
 	autoSteering = false;
 	straightTime = 0;
 
 	track: Track;
-	/** Steering help (auto-steer after wall contact). Off in Advanced driving. */
+	/** Steering help (autopilot). Off in Advanced driving. */
 	assist: boolean;
 
 	constructor(carId: CarId, track: Track, assist = true) {
@@ -325,8 +328,7 @@ export class PlayerCar {
 		this.safeTimer = 0;
 		this.safePos.copy(s.pos);
 		this.safeHeading = this.heading;
-		this.wallContactTime = 0;
-		this.autoSteerTime = 0;
+		this.idleTime = 0;
 		this.autoSteering = false;
 		this.straightTime = 0;
 		this.visual.group.position.copy(this.pos);
@@ -376,6 +378,7 @@ export class PlayerCar {
 
 	/** One physics step while the race is live: speed, steering, rails, help. */
 	private drive(dt: number, steer: number, before: NearestResult, tangentHeading: number): void {
+		this.updateInput(dt, steer);
 		this.updateSpeed(dt, steer, this.touchingRail);
 		this.steerAndMove(dt, steer, tangentHeading);
 
@@ -383,7 +386,8 @@ export class PlayerCar {
 		this.applyGuardrail(near, tangentHeading);
 
 		const after = this.track.nearestSample(this.pos, near.index);
-		this.updateAutoSteer(dt, after, tangentHeading);
+		if (this.autoSteering) this.followTrack(dt, after, tangentHeading);
+
 		if (this.updateRecovery(dt, after)) {
 			this.syncVisual(dt);
 			return;
@@ -391,6 +395,37 @@ export class PlayerCar {
 
 		this.advanceProgress(before, after, dt);
 		this.syncVisual(dt);
+	}
+
+	/**
+	 * Tracks whether the child is driving. Steering hands control back at once;
+	 * five quiet seconds hand it to the autopilot, which stays on until the next
+	 * steering input. Advanced driving never gets it.
+	 */
+	private updateInput(dt: number, steer: number): void {
+		if (Math.abs(steer) > STEER_INPUT_THRESHOLD) {
+			this.idleTime = 0;
+			this.autoSteering = false;
+			return;
+		}
+		this.idleTime += dt;
+		if (!this.assist) {
+			// Advanced driving has no autopilot, even after a long idle.
+			this.autoSteering = false;
+			return;
+		}
+		if (!this.autoSteering && this.idleTime >= AUTOPILOT_IDLE_SECONDS) {
+			this.autoSteering = true;
+		}
+	}
+
+	/** Autopilot: align with the road and drift back to the centre. */
+	private followTrack(dt: number, after: NearestResult, tangentHeading: number): void {
+		this.heading +=
+			shortestAngle(tangentHeading - this.heading) * Math.min(1, dt * AUTOPILOT_ALIGN_RATE);
+		const pull = Math.min(1, dt * AUTOPILOT_PULL_RATE);
+		this.pos.x += after.sample.normal.x * -after.lateral * pull;
+		this.pos.z += after.sample.normal.z * -after.lateral * pull;
 	}
 
 	private updateSpeed(dt: number, steer: number, railContact: boolean): void {
@@ -456,35 +491,6 @@ export class PlayerCar {
 		// Slide along the rail instead of pinning the car into it.
 		this.heading += shortestAngle(tangentHeading - this.heading) * RAIL_SLIDE_ALIGN;
 		this.touchingRail = true;
-	}
-
-	private updateAutoSteer(dt: number, after: NearestResult, tangentHeading: number): void {
-		if (this.touchingRail) this.wallContactTime += dt;
-		else this.wallContactTime = Math.max(0, this.wallContactTime - dt * 2);
-
-		if (this.assist && !this.autoSteering && this.wallContactTime >= ASSIST_TRIGGER_SECONDS) {
-			this.autoSteering = true;
-			this.autoSteerTime = 0;
-			this.wallContactTime = 0;
-		}
-		if (!this.autoSteering) return;
-
-		this.autoSteerTime += dt;
-		const lateral = this.track.nearestSample(this.pos, after.index).lateral;
-		// Take the wheel, align with the road and drift back to the centre. The
-		// badge in the HUD tells the child it is helping.
-		this.heading +=
-			shortestAngle(tangentHeading - this.heading) * Math.min(1, dt * ASSIST_ALIGN_RATE);
-		const pull = Math.min(1, dt * ASSIST_PULL_RATE);
-		this.pos.x += after.sample.normal.x * -lateral * pull;
-		this.pos.z += after.sample.normal.z * -lateral * pull;
-		if (
-			(Math.abs(lateral) < ASSIST_CENTRE_LATERAL && this.autoSteerTime > ASSIST_MIN_SECONDS) ||
-			this.autoSteerTime > ASSIST_MAX_SECONDS
-		) {
-			this.autoSteering = false;
-			this.wallContactTime = 0;
-		}
 	}
 
 	/** Tracks wrong-way/stuck timers and the last safe spot. True if it recovered. */

@@ -35,41 +35,42 @@ Profile picker (star / flower / moon)
 
 ## 4. Controls & portrait layout
 
-| Element       | Position                       | Behaviour                                      |
-| ------------- | ------------------------------ | ---------------------------------------------- |
-| Steer left    | bottom-left, 88 px circle      | Hold to turn left; release to centre           |
-| Steer right   | bottom-right, 88 px circle     | Hold to turn right; release to centre          |
-| Boost         | bottom-centre, above steer row | Tap to spend one charge; 2 s burst             |
-| Pause         | top-right, 54 px               | Free pause; auto-pause on focus loss           |
-| Track ribbon  | left edge, 60% height          | Player and rival dots                          |
-| Speedometer   | bottom-right, above steer      | Arc, needle and km/h digits                    |
-| AUTO badge    | top-centre, under lap pips     | Steering-wheel icon while auto-steer is active |
-| Balloon count | top-left                       | Icon + 15 small dots                           |
-| Lap pips      | top-centre                     | Three rings; fill gold when the lap completes  |
+| Element       | Position                       | Behaviour                                          |
+| ------------- | ------------------------------ | -------------------------------------------------- |
+| Steer left    | bottom-left, 88 px circle      | Hold to turn left; release to centre               |
+| Steer right   | bottom-right, 88 px circle     | Hold to turn right; release to centre              |
+| Boost         | bottom-centre, above steer row | Tap to spend one charge; 2 s burst                 |
+| Pause         | top-right, 54 px               | Free pause; auto-pause on focus loss               |
+| Track ribbon  | left edge, 60% height          | Player and rival dots                              |
+| Speedometer   | bottom-right, above steer      | Arc, needle and km/h digits                        |
+| AUTO badge    | top-centre, under lap pips     | Steering-wheel icon while the autopilot is driving |
+| Balloon count | top-left                       | Icon + 15 small dots                               |
+| Lap pips      | top-centre                     | Three rings; fill gold when the lap completes      |
 
 - No brake, reverse, or gear control. Auto-accelerate from 0 to cruise in ~2 s.
+- Keyboard (desktop): ← / A and → / D steer while held, Space / W / ↑ boosts, P toggles pause, Escape pauses. Keys are ignored while a dialog is open, and a muted hint appears in the garage on fine-pointer devices.
 - Touch targets ≥ 64 px with 12 px padding; taps slightly outside still register.
 - The game canvas is portrait 9:16; on desktop it is centred in a portrait column.
 - On a coarse-pointer device held landscape, a friendly rotate overlay covers the game. Installed PWA declares `orientation: portrait`.
 
 ## 5. Race rules
 
-| Rule            | Value                                                                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Laps            | 3                                                                                                                                                  |
-| Target duration | ~2 minutes                                                                                                                                         |
-| Cruise speed    | Assisted 11.5 m/s (~41 km/h); advanced 13.9 m/s (~50 km/h), drifting to 14.4 m/s (~52 km/h) on long straights. Boost 1.4× (advanced 1.15×) for 2 s |
-| Acceleration    | 6 m/s² to cruise                                                                                                                                   |
-| Steering        | 2.2 rad/s at low speed, easing to 1.6 rad/s at cruise                                                                                              |
-| Steering assist | No permanent auto-follow; after 2 s of wall contact, auto-steer takes over and a badge appears                                                     |
-| Track width     | 8 m; car 1.4 m wide                                                                                                                                |
-| Balloons        | 5 per lap, 15 per race, on the racing line                                                                                                         |
-| Boost charges   | Each balloon +1; max 3 stored; one tap = 1 charge                                                                                                  |
-| Guardrail       | Clamp lateral offset; 10% target-speed reduction while touching; sparkle + boop                                                                    |
-| Auto-recover    | Stuck (<0.4 m/s for 2 s) or wrong-way (>1.5 s) → last safe point, facing forward; boost kept                                                       |
-| Rival contact   | Soft bump: separate laterally, no speed loss, no spin, no damage; AI avoids repeat contact                                                         |
-| Rivals          | 3, rubber-banded, never collect balloons, never block                                                                                              |
-| Finish          | Crossing the line after lap 3 → auto-brake, confetti, results; balloons never end the race                                                         |
+| Rule            | Value                                                                                                                                                             |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Laps            | 3                                                                                                                                                                 |
+| Target duration | ~2 minutes                                                                                                                                                        |
+| Cruise speed    | Assisted 11.5 m/s (~41 km/h); advanced 13.9 m/s (~50 km/h), drifting to 14.4 m/s (~52 km/h) on long straights. Boost 1.4× (advanced 1.15×) for 2 s                |
+| Acceleration    | 6 m/s² to cruise                                                                                                                                                  |
+| Steering        | 2.2 rad/s at low speed, easing to 1.6 rad/s at cruise                                                                                                             |
+| Autopilot       | Assisted mode: after 5 s without steering input the car drives itself and a badge appears; the first steering input hands control back. Advanced driving has none |
+| Track width     | 8 m; car 1.4 m wide                                                                                                                                               |
+| Balloons        | 5 per lap, 15 per race, on the racing line                                                                                                                        |
+| Boost charges   | Each balloon +1; max 3 stored; one tap = 1 charge                                                                                                                 |
+| Guardrail       | Clamp lateral offset; 10% target-speed reduction while touching; sparkle + boop                                                                                   |
+| Auto-recover    | Stuck (<0.4 m/s for 2 s) or wrong-way (>1.5 s) → last safe point, facing forward; boost kept                                                                      |
+| Rival contact   | Soft bump: separate laterally, no speed loss, no spin, no damage; AI avoids repeat contact                                                                        |
+| Rivals          | 3, rubber-banded, never collect balloons, never block                                                                                                             |
+| Finish          | Crossing the line after lap 3 → auto-brake, confetti, results; balloons never end the race                                                                        |
 
 ### Stars
 
@@ -114,14 +115,14 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 ### Advanced driving
 
 - Settings → Advanced replaces the two steer buttons with one-finger drag anywhere on the track: drag left to go left, drag right to go right. A 6 px dead zone keeps the car straight; 64 px of travel reaches full lock.
-- Advanced disables the auto-steer assist entirely. Wrong-way and stuck recovery stay on, because they prevent broken states rather than helping with steering.
+- Advanced disables the autopilot entirely. Wrong-way and stuck recovery stay on, because they prevent broken states rather than helping with steering.
 - Advanced speed: 50 km/h base, creeping to 52 km/h after 2.5 s of clean straight (no steering input, no rail contact). Hitting a rail drops the target to 65% (~32 km/h); the car brakes down to it and has to accelerate back.
 - Advanced boost is 1.15× (≈60 km/h, just inside the 60 km/h dial) instead of 1.4×.
 - The tutorial's first step switches to "drag your finger" copy when advanced is on.
 - Lap 2 balloons reuse the same positions but respawn; only the current lap's set is visible.
 - Each world has its own palette, houses, trees, hills, flowers, rocks, lamp posts, flags, clouds and landmark props. On top of that, every circuit gets bushes, roadside benches and three bird flocks, plus one signature prop set: a striped market stall (Sunny Town), picnic tables (Park Loop), crates and barrels (Harbor Dash), dinosaur nests with eggs (Dino Valley) and marshmallow piles (Candy Hills). All scenery is non-collidable, instanced where repeated, and merged per material (`src/lib/game/decorations.ts`).
 - Guardrails are visual low curbs; collision is a mathematical lateral clamp that preserves the car's progress along the tangent, so it slides rather than pinning.
-- **Auto-steer:** wall contact accumulates a timer. After 2 s of contact (with 2× decay when off the rail), auto-steer aligns the car to the road and centres it for up to 4 s. The HUD shows a steering-wheel **AUTO** badge while it is active. It is the only automatic steering in the game.
+- **Autopilot:** after 5 s without steering input, the assisted car aligns itself with the road, drifts back to the centre and keeps driving. It never times itself out: the first steering input hands control back immediately, and a fresh 5 s of idle engages it again. The HUD shows a steering-wheel **AUTO** badge while it is active. Advanced driving has no autopilot; auto-recover (wrong-way/stuck) stays separate and always on.
 
 ## 7. Camera
 
@@ -193,7 +194,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
   - `src/lib/game/game.ts` — renderer, lights, world assembly, race phase machine, HUD snapshot.
   - `src/lib/game/track.ts` — five circuit definitions, track sampling, ribbon geometry, themed scenery and landmarks.
   - `src/lib/game/decorations.ts` — bushes, benches, bird flocks and the per-world decoration set.
-  - `src/lib/game/car.ts` — car model, physics, boost, guardrail, auto-steer assist.
+  - `src/lib/game/car.ts` — car model, physics, boost, guardrail, autopilot.
   - `src/lib/game/rivals.ts` — spline followers, rubber-band, bump.
   - `src/lib/game/camera.ts` — chase camera, look-ahead, calm mode.
   - `src/lib/game/balloons.ts` — placement, bob, collection.
@@ -229,6 +230,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 - Track: closed spline length > 0; lateral clamp keeps the car within half-width; lap wrap does not double-count; scenery rejection uses `isFartherThan`.
 - Boost: charge cap 3; tap below 1 does nothing; 2 s duration; speed multiplier returns exactly.
 - Rivals: three of them, never the player's car; rubber-band ±8% at 25 m; bump pushes once per 0.6 s and cannot leave the road.
+- Autopilot: off before 5 s of idle, on after it, off on the first steering input, re-armed by a fresh 5 s of idle, never on in Advanced.
 - Balloons: five per lap, only the current lap is collectable, forceCollect rounds to whole balloons.
 - Merge: same material merges, different materials do not, offsets are baked.
 - i18n: Italian and English expose identical keys.
@@ -239,7 +241,9 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 - Debug hook `window.__zoomtown` (only with `?debug=1`) can set speed, collect all balloons, force finish; results show 3 stars and a car unlock.
 - Reload preserves best stars and selected car.
 - Landscape phone shows the rotate overlay; portrait hides it.
-- Advanced driving: drag steering works, no auto-steer, and the pause button stays tappable under the drag surface.
+- Advanced driving: drag steering works, no autopilot, and the pause button stays tappable under the drag surface.
+- Keyboard on desktop: held arrows steer, Space boosts once, Escape pauses and P resumes.
+- The autopilot badge appears after five idle seconds and clears on the first steering input.
 - The document language follows the saved language and the labels switch with it.
 - A failed stylesheet never fakes a boot failure; a boot that never mounts shows the recovery card.
 

@@ -25,6 +25,7 @@
 	import Tutorial from '#lib/components/Tutorial.svelte';
 	import { isIosDevice, isIosSafari, isStandalone } from '#lib/pwa';
 	import { messages } from '#lib/i18n';
+	import { bindDrivingKeys } from '#lib/game/keyboard';
 
 	type Screen = 'profiles' | 'garage' | 'race';
 	type TutorialMode = 'first' | 'replay' | null;
@@ -126,6 +127,22 @@
 		updateRotate();
 		rotateQuery.addEventListener('change', updateRotate);
 
+		// Desktop controls. Steering and boost are ignored while an overlay owns
+		// the screen; Escape only pauses, P toggles.
+		const overlayOpen = () =>
+			tutorialOpen || settingsOpen || installOpen || rotate || result !== null;
+		const unbindKeys = bindDrivingKeys({
+			onSteer: (value) => game?.setSteer(value),
+			onBoost: () => game?.requestBoost(),
+			onTogglePause: () => {
+				if (paused) resumeGame();
+				else if (!overlayOpen()) pauseGame();
+			},
+			onEscape: () => {
+				if (!paused && !overlayOpen()) pauseGame();
+			}
+		});
+
 		const onVisibility = () => {
 			if (document.visibilityState === 'hidden' && screen === 'race' && !paused && !result) {
 				pauseGame();
@@ -158,6 +175,7 @@
 
 		return () => {
 			rotateQuery.removeEventListener('change', updateRotate);
+			unbindKeys();
 			document.removeEventListener('visibilitychange', onVisibility);
 			void releaseWakeLock();
 			game?.dispose();

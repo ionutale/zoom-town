@@ -1,6 +1,6 @@
 # Zoom Town
 
-A portrait-first 3D toy-town racer for children aged 5–7. The car drives itself, the child steers, pops balloons, and boosts. Five themed circuits, a speedometer, auto-steer help after wall contact, and four animal drivers. Nobody loses; stars unlock the cars.
+A portrait-first 3D toy-town racer for children aged 5–7. The car drives itself, the child steers, pops balloons, and boosts. Five themed circuits, a speedometer, an autopilot after five idle seconds, and four animal drivers. Nobody loses; stars unlock the cars.
 
 **Live:** https://zoom-town.aiu-media.com (also https://zoom-town.alexionutale.workers.dev)
 
@@ -12,6 +12,14 @@ pnpm dev --host 127.0.0.1 --port 4180
 ```
 
 Open the portrait viewport at `http://127.0.0.1:4180/`. The game is designed for a phone in portrait; desktop shows a centred portrait column.
+
+## Controls
+
+**Touch:** hold the left/right arrows to steer, tap the big button to boost, tap pause to stop.
+
+**Keyboard (desktop):** **← / A** and **→ / D** steer while held, **Space** (or **W** / **↑**) boosts, **P** pauses or resumes, **Esc** pauses. Keys are ignored while a dialog is open, and a muted hint appears in the garage on fine-pointer devices.
+
+If the child stops steering for five seconds, the autopilot drives the car along the road; the first steering input hands control straight back. Advanced driving has no autopilot.
 
 ## Commands
 

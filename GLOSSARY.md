@@ -88,9 +88,9 @@ _Avoid_: onboarding, help, instructions
 A short spoken line that guides or celebrates, such as “Ready? Go!” or “Great driving!”.
 _Avoid_: voice-over, narration, prompt
 
-**Auto-steer**:
-The temporary steering help that takes over after two seconds of wall contact, centres the car, and shows an AUTO badge.
-_Avoid_: autopilot, assist mode, auto-drive
+**Auto-steer** (the “autopilot”):
+The steering help that takes over after five seconds without steering input, drives the car along the road, and shows an AUTO badge. The first steering input hands control back; it never times out, and Advanced driving has none.
+_Avoid_: assist mode, auto-drive, self-driving
 
 **Speedometer**:
 The HUD gauge that shows the car's current speed in kilometres per hour.

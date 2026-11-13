@@ -231,7 +231,7 @@ export class ZoomTownGame {
 		this.player.assist = !value;
 		if (!this.player.assist) {
 			this.player.autoSteering = false;
-			this.player.autoSteerTime = 0;
+			this.player.idleTime = 0;
 		}
 		this.emitHud(true);
 	}
@@ -315,7 +315,7 @@ export class ZoomTownGame {
 			prevIndex: this.player.prevIndex,
 			touchingRail: this.player.touchingRail,
 			autoSteer: this.player.autoSteering,
-			wallContactTime: this.player.wallContactTime,
+			idleTime: this.player.idleTime,
 			rivalCount: this.rivals.length,
 			rivals: this.rivals.map((rival) => ({
 				id: rival.id,
