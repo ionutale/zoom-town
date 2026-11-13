@@ -4,6 +4,16 @@ A portrait-first 3D toy-town racer for children aged 5–7. The car drives itsel
 
 **Live:** https://zoom-town.aiu-media.com (also https://zoom-town.alexionutale.workers.dev)
 
+## Screenshots
+
+| Profiles                                                                       | Garage                                                                             |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| ![Three profiles, each showing its star record](docs/screenshots/profiles.png) | ![The garage with four animal cars and five circuits](docs/screenshots/garage.png) |
+
+| Racing                                                                                               | Results                                                                        |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| ![Racing through Candy Hills with a rival ahead and balloons on the line](docs/screenshots/race.png) | ![The trophy, three stars and 15 of 15 balloons](docs/screenshots/results.png) |
+
 ## Run
 
 ```sh
