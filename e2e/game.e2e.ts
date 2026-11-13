@@ -11,20 +11,43 @@ test.beforeEach(async ({ page }) => {
 	// Each Playwright test already gets a fresh context. Clearing on the first
 	// document load (sessionStorage survives reloads) also keeps tests that reuse
 	// a context independent, without wiping the save mid-test.
-	await page.addInitScript(() => {
+	//
+	// The language is pinned to English so the accessible names asserted below do
+	// not depend on the product default (Italian).
+	await page.addInitScript((pinned) => {
 		try {
-			if (!sessionStorage.getItem('zoomtown.e2e.fresh')) {
+			const lang = pinned === 'it' ? 'it' : 'en';
+			const fresh = !sessionStorage.getItem('zoomtown.e2e.fresh');
+			if (fresh) {
 				localStorage.clear();
 				sessionStorage.setItem('zoomtown.e2e.fresh', '1');
 			}
+			const raw = localStorage.getItem('zoomtown.save.v1');
+			const save = raw ? JSON.parse(raw) : null;
+			// Pin the language on the first load only; later navigations keep
+			// whatever the app itself saved, so language switching stays testable.
+			const language = fresh ? lang : (save?.settings?.lang ?? lang);
+			localStorage.setItem(
+				'zoomtown.save.v1',
+				JSON.stringify({
+					version: 1,
+					profiles: save?.profiles ?? [null, null, null],
+					settings: {
+						sound: save?.settings?.sound ?? true,
+						lang: language,
+						reducedMotion: save?.settings?.reducedMotion ?? false,
+						advancedDriving: save?.settings?.advancedDriving ?? false
+					}
+				})
+			);
 		} catch {
 			// Storage unavailable: the fresh context is already isolated.
 		}
-	});
+	}, 'en');
 });
 
 async function openGarage(page: Page): Promise<void> {
-	await page.goto('/');
+	await page.goto('/?debug=1');
 	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 	await page.getByRole('button', { name: 'Profile 1' }).click();
 	await expect(page.getByRole('button', { name: 'Sunny Town' })).toBeVisible();
@@ -56,7 +79,7 @@ async function displayedSpeed(page: Page): Promise<number> {
 }
 
 test('portrait race, three stars, unlock and persistence', async ({ page }) => {
-	await page.goto('/');
+	await page.goto('/?debug=1');
 	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 	expect(await page.evaluate(() => (window as any).__zoomtown.screen())).toBe('profiles');
 	await page.getByRole('button', { name: 'Profile 1' }).click();
@@ -66,10 +89,11 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 		(window as any).__zoomtown.start('bear', 'park-loop');
 		(window as any).__zoomtown.skipCountdown();
 	});
-	await page.waitForTimeout(800);
-	const state = await page.evaluate(() => (window as any).__zoomtown.state());
+	await expect
+		.poll(async () => (await debugState(page)).audioReady, { timeout: 8000, intervals: [100] })
+		.toBe(true);
+	const state = await debugState(page);
 	expect(state.phase).toBe('racing');
-	expect(state.audioReady).toBe(true);
 	expect(state.rivalCount).toBe(3);
 	expect(state.track).toBe('park-loop');
 	await expect(page.getByLabel(/Speed/)).toBeVisible();
@@ -88,6 +112,12 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 	await expect(page.getByLabel('3 of 3 stars')).toBeVisible();
 	await expect(page.getByLabel('Race again')).toBeVisible();
 
+	// The results dialog must stay operable even though the game behind it is
+	// inert: it is rendered outside the inert world container.
+	await page.getByRole('button', { name: 'Race again' }).click();
+	await expect(page.getByRole('dialog', { name: 'Race results' })).toBeHidden();
+	await expect.poll(async () => (await debugState(page)).phase).not.toBe('finished');
+
 	const save = await page.evaluate(() => (window as any).__zoomtown.save());
 	expect(save.profiles[0].bestStars).toBe(3);
 	expect(save.profiles[0].unlocked).toEqual(['bear', 'bunny', 'fox', 'cat']);
@@ -98,7 +128,7 @@ test('portrait race, three stars, unlock and persistence', async ({ page }) => {
 	expect(persisted.profiles[0].bestStars).toBe(3);
 
 	await page.setViewportSize({ width: 844, height: 390 });
-	await expect(page.getByText('Mettimi in verticale')).toBeVisible();
+	await expect(page.getByText('Turn me upright')).toBeVisible();
 });
 
 test.describe('iOS installation', () => {
@@ -112,26 +142,26 @@ test.describe('iOS installation', () => {
 	});
 
 	test('shows Safari Add to Home Screen steps', async ({ page }) => {
-		await page.goto('/');
+		await page.goto('/?debug=1');
 		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 
-		await expect(page.getByText('Installa Zoom Town')).toBeVisible();
-		await page.getByText('Installa Zoom Town').click();
+		await expect(page.getByText('Install Zoom Town')).toBeVisible();
+		await page.getByText('Install Zoom Town').click();
 
 		await expect(page.getByRole('dialog', { name: 'Install Zoom Town' })).toBeVisible();
-		await expect(page.getByRole('heading', { name: 'Installa Zoom Town' })).toBeVisible();
-		await expect(page.getByText('Tocca il pulsante Condividi.')).toBeVisible();
-		await expect(page.getByText('Scegli Aggiungi alla schermata Home.')).toBeVisible();
-		await expect(page.getByText('Tocca Aggiungi. Fatto!')).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Install Zoom Town' })).toBeVisible();
+		await expect(page.getByText('Tap the Share button.')).toBeVisible();
+		await expect(page.getByText('Choose Add to Home Screen.')).toBeVisible();
+		await expect(page.getByText('Tap Add. Done!')).toBeVisible();
 
-		await page.getByRole('button', { name: 'Non mostrare più' }).click();
-		await expect(page.getByText('Installa Zoom Town')).toBeHidden();
+		await page.getByRole('button', { name: "Don't show again" }).click();
+		await expect(page.getByText('Install Zoom Town')).toBeHidden();
 
 		await page.getByRole('button', { name: 'Settings' }).click();
-		await expect(page.getByText('Installa app')).toBeVisible();
-		await page.getByText('Installa app').click();
-		await expect(page.getByRole('heading', { name: 'Installa Zoom Town' })).toBeVisible();
-		await page.getByRole('button', { name: 'Ho capito' }).click();
+		await expect(page.getByText('Install app')).toBeVisible();
+		await page.getByText('Install app').click();
+		await expect(page.getByRole('heading', { name: 'Install Zoom Town' })).toBeVisible();
+		await page.getByRole('button', { name: 'Got it' }).click();
 	});
 });
 
@@ -216,6 +246,10 @@ test('speedometer shows live speed and the results screen disables the HUD', asy
 		return document.activeElement === steer;
 	});
 	expect(focusStolen).toBe(false);
+
+	// Home is the other results action and must be tappable too.
+	await page.getByRole('button', { name: 'Back to garage' }).click();
+	await expect(page.getByRole('button', { name: 'Sunny Town' })).toBeVisible();
 });
 
 test('auto-steer badge appears after sustained rail contact and clears after release', async ({
@@ -257,7 +291,7 @@ test('auto-steer badge appears after sustained rail contact and clears after rel
 
 test.describe('advanced driving', () => {
 	async function enableAdvanced(page: Page): Promise<void> {
-		await page.goto('/');
+		await page.goto('/?debug=1');
 		await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 		await page.getByRole('button', { name: 'Settings' }).click();
 		await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
@@ -283,10 +317,14 @@ test.describe('advanced driving', () => {
 		await page.mouse.move(x, y);
 		await page.mouse.down();
 		await page.mouse.move(x + 72, y, { steps: 6 });
-		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBeGreaterThan(0.5);
+		await expect
+			.poll(async () => (await debugState(page)).steer, { timeout: 4000 })
+			.toBeGreaterThan(0.5);
 
 		await page.mouse.move(x - 72, y, { steps: 6 });
-		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBeLessThan(-0.5);
+		await expect
+			.poll(async () => (await debugState(page)).steer, { timeout: 4000 })
+			.toBeLessThan(-0.5);
 
 		await page.mouse.up();
 		await expect.poll(async () => (await debugState(page)).steer, { timeout: 4000 }).toBe(0);
@@ -299,7 +337,10 @@ test.describe('advanced driving', () => {
 
 		await page.evaluate(() => (window as any).__zoomtown.steer(1));
 		await expect
-			.poll(async () => (await debugState(page)).wallContactTime, { timeout: 12_000, intervals: [100] })
+			.poll(async () => (await debugState(page)).wallContactTime, {
+				timeout: 12_000,
+				intervals: [100]
+			})
 			.toBeGreaterThan(2.2);
 
 		// The assisted mode would have taken over by now; advanced must not.
@@ -307,6 +348,21 @@ test.describe('advanced driving', () => {
 			.poll(async () => (await debugState(page)).autoSteer, { timeout: 3000, intervals: [100] })
 			.toBe(false);
 		await expect(page.getByLabel('Auto steering')).toHaveCount(0);
+	});
+
+	test('can still pause while the drag surface covers the screen', async ({ page }) => {
+		await enableAdvanced(page);
+		await page.getByRole('button', { name: 'Profile 1' }).click();
+		await startRace(page, 'bear', 'park-loop');
+
+		await expect(page.getByRole('slider', { name: 'Drag left or right to steer' })).toBeVisible();
+
+		// Regression: the full-screen drag surface used to paint over the pause
+		// button, so a child in Advanced driving could not pause at all.
+		await page.getByRole('button', { name: 'Pause' }).click();
+		await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
+		await page.getByRole('button', { name: 'Resume' }).click();
+		await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
 	});
 });
 
@@ -329,7 +385,7 @@ test('boots offline from the precached build and shows a recovery card on failur
 	page,
 	context
 }) => {
-	await page.goto('/');
+	await page.goto('/?debug=1');
 	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
 
 	await expect
@@ -360,14 +416,38 @@ test('boots offline from the precached build and shows a recovery card on failur
 		});
 	}
 
-	// A failed boot must never leave a black screen.
+	// A stray rejection after a successful boot must not cover a working game.
 	await page.evaluate(() => {
+		const event = new Event('unhandledrejection');
+		(event as unknown as { reason: unknown }).reason = new Error('e2e late failure');
+		window.dispatchEvent(event);
+	});
+	await expect(page.getByText('Il gioco non si è avviato.')).toBeHidden();
+
+	// A boot that never mounts must surface the recovery card instead of a black
+	// screen. Removing the mounted tree reproduces that state.
+	await page.evaluate(() => {
+		document.querySelector('.stage')?.remove();
 		const event = new Event('unhandledrejection');
 		(event as unknown as { reason: unknown }).reason = new Error('e2e chunk failure');
 		window.dispatchEvent(event);
 	});
 	await expect(page.getByText('Il gioco non si è avviato.')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Ricarica' })).toBeVisible();
+});
+
+test('a broken stylesheet cannot fake a boot failure', async ({ page }) => {
+	await openGarage(page);
+	await page.evaluate(() => {
+		const link = document.createElement('link');
+		link.rel = 'stylesheet';
+		link.href = '/definitely-missing.css';
+		document.head.appendChild(link);
+	});
+	// Give the failed request time to fire its error event.
+	await page.waitForTimeout(400);
+	await expect(page.getByText('Il gioco non si è avviato.')).toBeHidden();
+	await expect(page.getByRole('button', { name: 'Sunny Town' })).toBeVisible();
 });
 
 test('pause screen is a dialog and disables the racing HUD', async ({ page }) => {
@@ -378,6 +458,37 @@ test('pause screen is a dialog and disables the racing HUD', async ({ page }) =>
 	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
 	await expect(page.locator('.hud')).toHaveAttribute('inert', '');
 
+	// Escape closes the dialog (the modal action owns the key handler).
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
+	await expect(page.locator('.hud')).not.toHaveAttribute('inert', '');
+
+	await page.getByRole('button', { name: 'Pause' }).click();
 	await page.getByRole('button', { name: 'Resume' }).click();
 	await expect(page.locator('.hud')).not.toHaveAttribute('inert', '');
+});
+
+test('ships without the debug hook unless it is asked for', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+	expect(await page.evaluate(() => (window as any).__zoomtown)).toBeUndefined();
+});
+
+test('follows the saved language in the document and in the labels', async ({ page }) => {
+	await page.goto('/?debug=1');
+	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+
+	expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
+
+	await page.getByRole('button', { name: 'Settings' }).click();
+	await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+	await page.getByRole('button', { name: 'IT', exact: true }).click();
+
+	expect(await page.evaluate(() => document.documentElement.lang)).toBe('it');
+	await page.getByRole('button', { name: 'Chiudi impostazioni' }).click();
+	await expect(page.getByRole('button', { name: 'Profilo 1' })).toBeVisible();
+
+	await page.reload();
+	await expect(page.getByRole('button', { name: 'Profilo 1' })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.lang)).toBe('it');
 });

@@ -7,12 +7,24 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * one mesh per material keeps the exact same pixels while cutting the calls.
  */
 
+interface LitLike {
+	color?: THREE.Color;
+	emissive?: THREE.Color;
+	emissiveIntensity?: number;
+	flatShading?: boolean;
+	vertexColors?: boolean;
+}
+
+/**
+ * Everything that changes the rendered result becomes part of the key, so two
+ * meshes are only merged when they would look identical.
+ */
 function materialKey(material: THREE.Material): string {
-	const lit = material as THREE.MeshLambertMaterial;
+	const lit = material as THREE.Material & LitLike;
 	return [
 		material.type,
-		lit.color ? lit.color.getHexString() : '',
-		lit.emissive ? lit.emissive.getHexString() : '',
+		lit.color?.getHexString() ?? '',
+		lit.emissive?.getHexString() ?? '',
 		lit.emissiveIntensity ?? '',
 		lit.flatShading ? 'flat' : 'smooth',
 		lit.vertexColors ? 'vc' : '',

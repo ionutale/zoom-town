@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
 	import type { Lang } from '#lib/save';
+	import { modal } from './modal';
 
 	let {
 		lang,
@@ -13,34 +15,18 @@
 		onDismiss: () => void;
 	} = $props();
 
-	const text = $derived(
-		lang === 'it'
-			? {
-					title: 'Installa Zoom Town',
-					notSafari: 'Apri questa pagina in Safari per installarla.',
-					offline: 'Si apre a schermo intero e funziona anche offline.',
-					step1: 'Tocca il pulsante Condividi.',
-					step2: 'Scegli Aggiungi alla schermata Home.',
-					step3: 'Tocca Aggiungi. Fatto!',
-					done: 'Ho capito',
-					never: 'Non mostrare più'
-				}
-			: {
-					title: 'Install Zoom Town',
-					notSafari: 'Open this page in Safari to install it.',
-					offline: 'It opens full-screen and works offline too.',
-					step1: 'Tap the Share button.',
-					step2: 'Choose Add to Home Screen.',
-					step3: 'Tap Add. Done!',
-					done: 'Got it',
-					never: "Don't show again"
-				}
-	);
+	const t = $derived(messages(lang));
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Install Zoom Town">
+<div
+	class="overlay"
+	role="dialog"
+	aria-modal="true"
+	aria-label={t.installTitle}
+	use:modal={{ onEscape: onClose }}
+>
 	<div class="card">
-		<button class="close" onclick={onClose} aria-label={lang === 'it' ? 'Chiudi' : 'Close'}>
+		<button class="close" onclick={onClose} aria-label={t.close}>
 			<svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true">
 				<path
 					d="M8 8 L24 24 M24 8 L8 24"
@@ -69,8 +55,8 @@
 			</svg>
 		</div>
 
-		<h2>{text.title}</h2>
-		<p class="lead">{text.offline}</p>
+		<h2>{t.installTitle}</h2>
+		<p class="lead">{t.installOffline}</p>
 
 		{#if !safari}
 			<p class="warning">
@@ -92,7 +78,7 @@
 					/>
 					<path d="M16 16 L20 12" stroke="#26313C" stroke-width="2.5" stroke-linecap="round" />
 				</svg>
-				<span>{text.notSafari}</span>
+				<span>{t.installNotSafari}</span>
 			</p>
 		{/if}
 
@@ -120,7 +106,7 @@
 						/>
 					</svg>
 				</span>
-				<span>{text.step1}</span>
+				<span>{t.installStep1}</span>
 			</li>
 			<li>
 				<span class="step-icon" aria-hidden="true">
@@ -143,7 +129,7 @@
 						/>
 					</svg>
 				</span>
-				<span>{text.step2}</span>
+				<span>{t.installStep2}</span>
 			</li>
 			<li>
 				<span class="step-icon" aria-hidden="true">
@@ -168,13 +154,13 @@
 						/>
 					</svg>
 				</span>
-				<span>{text.step3}</span>
+				<span>{t.installStep3}</span>
 			</li>
 		</ol>
 
 		<div class="actions">
-			<button class="done" onclick={onClose}>{text.done}</button>
-			<button class="never" onclick={onDismiss}>{text.never}</button>
+			<button class="done" onclick={onClose}>{t.installDone}</button>
+			<button class="never" onclick={onDismiss}>{t.installNever}</button>
 		</div>
 	</div>
 </div>

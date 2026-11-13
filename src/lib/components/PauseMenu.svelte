@@ -1,6 +1,11 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
+	import type { Lang } from '#lib/save';
+	import { modal } from './modal';
+
 	let {
 		sound,
+		lang = 'it',
 		onResume,
 		onRestart,
 		onHome,
@@ -8,24 +13,33 @@
 		onTutorial
 	}: {
 		sound: boolean;
+		lang?: Lang;
 		onResume: () => void;
 		onRestart: () => void;
 		onHome: () => void;
 		onSound: () => void;
 		onTutorial: () => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Paused">
+<div
+	class="overlay"
+	role="dialog"
+	aria-modal="true"
+	aria-label={t.paused}
+	use:modal={{ onEscape: onResume }}
+>
 	<div class="card">
-		<button class="big resume" onclick={onResume} aria-label="Resume">
+		<button class="big resume" onclick={onResume} aria-label={t.resume}>
 			<svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true">
 				<path d="M16 10 L38 24 L16 38 Z" fill="#26313C" />
 			</svg>
 		</button>
 
 		<div class="row">
-			<button class="small" onclick={onRestart} aria-label="Restart race">
+			<button class="small" onclick={onRestart} aria-label={t.restart}>
 				<svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
 					<path
 						d="M32 20a12 12 0 1 1-3.5-8.5"
@@ -45,7 +59,7 @@
 				</svg>
 			</button>
 
-			<button class="small" onclick={onTutorial} aria-label="Tutorial">
+			<button class="small" onclick={onTutorial} aria-label={t.tutorial}>
 				<svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
 					<circle cx="20" cy="20" r="14" fill="none" stroke="#26313C" stroke-width="4" />
 					<path
@@ -59,7 +73,7 @@
 				</svg>
 			</button>
 
-			<button class="small" onclick={onSound} aria-label={sound ? 'Mute' : 'Unmute'}>
+			<button class="small" onclick={onSound} aria-label={sound ? t.mute : t.unmute}>
 				{#if sound}
 					<svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
 						<path d="M8 16 H14 L21 10 V30 L14 24 H8 Z" fill="#26313C" />
@@ -85,7 +99,7 @@
 				{/if}
 			</button>
 
-			<button class="small" onclick={onHome} aria-label="Back to garage">
+			<button class="small" onclick={onHome} aria-label={t.backToGarage}>
 				<svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
 					<path
 						d="M6 19 L20 7 L34 19"

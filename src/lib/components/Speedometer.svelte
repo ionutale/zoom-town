@@ -1,14 +1,20 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
+	import type { Lang } from '#lib/save';
+
 	let {
 		speed,
 		boosting = false,
-		max = 60
+		max = 60,
+		lang = 'it'
 	}: {
 		speed: number;
 		boosting?: boolean;
 		max?: number;
+		lang?: Lang;
 	} = $props();
 
+	const t = $derived(messages(lang));
 	const clamped = $derived(Math.max(0, Math.min(max, speed)));
 	const ratio = $derived(clamped / max);
 	const angle = $derived(-90 + ratio * 180);
@@ -17,14 +23,16 @@
 	const ticks = [0, 0.25, 0.5, 0.75, 1];
 </script>
 
-<div
-	class="speedo"
-	class:boosting
-	aria-label={`Speed ${display} kilometres per hour`}
-	role="img"
->
+<div class="speedo" class:boosting aria-label={t.speed(display)} role="img">
 	<svg viewBox="0 0 100 76" aria-hidden="true">
-		<path d="M 12 62 A 38 38 0 0 1 88 62" fill="none" stroke="#26313C" stroke-opacity="0.16" stroke-width="9" stroke-linecap="round" />
+		<path
+			d="M 12 62 A 38 38 0 0 1 88 62"
+			fill="none"
+			stroke="#26313C"
+			stroke-opacity="0.16"
+			stroke-width="9"
+			stroke-linecap="round"
+		/>
 		<path
 			d="M 12 62 A 38 38 0 0 1 88 62"
 			fill="none"
@@ -51,15 +59,40 @@
 		{/each}
 
 		<g transform={`rotate(${angle} 50 62)`}>
-			<line x1="50" y1="62" x2="50" y2="26" stroke="#E8433F" stroke-width="3.6" stroke-linecap="round" />
+			<line
+				x1="50"
+				y1="62"
+				x2="50"
+				y2="26"
+				stroke="#E8433F"
+				stroke-width="3.6"
+				stroke-linecap="round"
+			/>
 			<circle cx="50" cy="62" r="5" fill="#26313C" />
 			<circle cx="50" cy="62" r="2.2" fill="#FFF6E3" />
 		</g>
 
-		<text x="50" y="50" text-anchor="middle" fill="#26313C" font-size="21" font-weight="700" font-family="Fredoka Variable, system-ui, sans-serif">
+		<text
+			x="50"
+			y="50"
+			text-anchor="middle"
+			fill="#26313C"
+			font-size="21"
+			font-weight="700"
+			font-family="Fredoka Variable, system-ui, sans-serif"
+		>
 			{display}
 		</text>
-		<text x="50" y="63" text-anchor="middle" fill="#5B6B78" font-size="8.5" font-weight="600" letter-spacing="1.2" font-family="Fredoka Variable, system-ui, sans-serif">
+		<text
+			x="50"
+			y="63"
+			text-anchor="middle"
+			fill="#5B6B78"
+			font-size="8.5"
+			font-weight="600"
+			letter-spacing="1.2"
+			font-family="Fredoka Variable, system-ui, sans-serif"
+		>
 			KM/H
 		</text>
 	</svg>

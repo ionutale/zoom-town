@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { markSharedResource } from './dispose';
 import { mergeMeshesByMaterial } from './merge';
 import { LAPS } from './rules';
 import { COLORS } from './palette';
@@ -7,6 +8,8 @@ import type { Track } from './track';
 const BALLOON_TS = [0.06, 0.24, 0.42, 0.6, 0.78];
 const BALLOON_LANES = [-1.4, 0, 1.4, 0, -1.4];
 const BALLOON_COLORS = [COLORS.red, COLORS.yellow, COLORS.blue, COLORS.pink, COLORS.teal];
+/** How close the car must pass to pop a balloon. */
+const PICKUP_RADIUS = 1.95;
 
 export interface BalloonItem {
 	group: THREE.Group;
@@ -32,6 +35,19 @@ const highlightGeometry = new THREE.SphereGeometry(0.1, 8, 6);
 const stringMaterial = new THREE.MeshBasicMaterial({ color: COLORS.cream });
 const bandMaterial = new THREE.MeshBasicMaterial({ color: COLORS.white });
 const highlightMaterial = new THREE.MeshBasicMaterial({ color: COLORS.white });
+
+// Balloon trim is shared by all fifteen balloons, so it must survive a single
+// balloon group being rebuilt for another circuit.
+markSharedResource(
+	balloonGeometry,
+	bandGeometry,
+	stringGeometry,
+	knotGeometry,
+	highlightGeometry,
+	stringMaterial,
+	bandMaterial,
+	highlightMaterial
+);
 
 export class Balloons {
 	items: BalloonItem[] = [];
@@ -115,15 +131,16 @@ export class Balloons {
 		}
 	}
 
+	/** Debug helper: marks exactly `total` balloons as collected. */
 	forceCollect(total: number): void {
-		this.collectedTotal = total;
-		let shown = 0;
+		const target = Math.max(0, Math.min(this.items.length, Math.round(total)));
+		this.collectedTotal = target;
+		let collected = 0;
 		for (const item of this.items) {
-			if (shown < total) {
-				item.collected = true;
-				item.group.visible = false;
-				shown++;
-			}
+			const take = collected < target;
+			item.collected = take;
+			item.group.visible = !take && item.lap === this.currentLap;
+			if (take) collected++;
 		}
 	}
 
@@ -146,7 +163,7 @@ export class Balloons {
 			item.group.rotation.y = Math.sin(this.time * 0.9 + item.phase) * 0.25;
 			const dx = playerPos.x - item.group.position.x;
 			const dz = playerPos.z - item.group.position.z;
-			if (dx * dx + dz * dz < 1.95 * 1.95) {
+			if (dx * dx + dz * dz < PICKUP_RADIUS * PICKUP_RADIUS) {
 				item.collected = true;
 				item.group.visible = false;
 				this.collectedTotal++;

@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
 	import type { Lang } from '#lib/save';
 
 	let { lang }: { lang: Lang } = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
 <div class="rotate">
@@ -9,7 +12,7 @@
 		<span class="screen"></span>
 		<span class="button"></span>
 	</div>
-	<p>{lang === 'it' ? 'Mettimi in verticale' : 'Turn me upright'}</p>
+	<p>{t.rotate}</p>
 </div>
 
 <style>

@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import type { Settings } from '#lib/save';
+	import { messages } from '#lib/i18n';
+	import type { Lang, Settings } from '#lib/save';
+	import { modal } from './modal';
 
 	let {
 		settings,
+		lang = 'it',
 		hasProfile,
 		showInstall = false,
 		onSound,
@@ -15,10 +18,11 @@
 		onClose
 	}: {
 		settings: Settings;
+		lang?: Lang;
 		hasProfile: boolean;
 		showInstall?: boolean;
 		onSound: () => void;
-		onLang: (lang: 'it' | 'en') => void;
+		onLang: (lang: Lang) => void;
 		onMotion: () => void;
 		onAdvanced: () => void;
 		onInstall?: () => void;
@@ -26,25 +30,10 @@
 		onClose: () => void;
 	} = $props();
 
+	const t = $derived(messages(lang));
+
 	let hold = $state(0);
 	let timer: number | null = null;
-	const labels = $derived(
-		settings.lang === 'it'
-			? {
-					sound: 'Suono',
-					language: 'Lingua',
-					calm: 'Calmo',
-					advanced: 'Avanzata',
-					install: 'Installa app'
-				}
-			: {
-					sound: 'Sound',
-					language: 'Language',
-					calm: 'Calm',
-					advanced: 'Advanced',
-					install: 'Install app'
-				}
-	);
 
 	function startHold() {
 		if (!hasProfile) return;
@@ -70,9 +59,15 @@
 	onDestroy(stopHold);
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Settings">
+<div
+	class="overlay"
+	role="dialog"
+	aria-modal="true"
+	aria-label={t.settings}
+	use:modal={{ onEscape: onClose }}
+>
 	<div class="card">
-		<button class="close" onclick={onClose} aria-label="Close settings">
+		<button class="close" onclick={onClose} aria-label={t.closeSettings}>
 			<svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true">
 				<path
 					d="M8 8 L24 24 M24 8 L8 24"
@@ -109,8 +104,8 @@
 					</svg>
 				{/if}
 			</span>
-			<span class="label">{labels.sound}</span>
-			<button class="switch" class:on={settings.sound} onclick={onSound} aria-label="Toggle sound">
+			<span class="label">{t.sound}</span>
+			<button class="switch" class:on={settings.sound} onclick={onSound} aria-label={t.toggleSound}>
 				<span></span>
 			</button>
 		</div>
@@ -120,7 +115,7 @@
 				<strong>IT</strong>
 				<strong>EN</strong>
 			</span>
-			<span class="label">{labels.language}</span>
+			<span class="label">{t.language}</span>
 			<div class="pills">
 				<button class="pill" class:on={settings.lang === 'it'} onclick={() => onLang('it')}
 					>IT</button
@@ -151,12 +146,12 @@
 					/>
 				</svg>
 			</span>
-			<span class="label">{labels.calm}</span>
+			<span class="label">{t.calm}</span>
 			<button
 				class="switch"
 				class:on={settings.reducedMotion}
 				onclick={onMotion}
-				aria-label="Toggle reduced motion"
+				aria-label={t.toggleMotion}
 			>
 				<span></span>
 			</button>
@@ -196,12 +191,12 @@
 					/>
 				</svg>
 			</span>
-			<span class="label">{labels.advanced}</span>
+			<span class="label">{t.advanced}</span>
 			<button
 				class="switch"
 				class:on={settings.advancedDriving}
 				onclick={onAdvanced}
-				aria-label="Toggle advanced driving"
+				aria-label={t.toggleAdvanced}
 			>
 				<span></span>
 			</button>
@@ -232,7 +227,7 @@
 						<path d="M14 26 H26" stroke="#7CC242" stroke-width="3" stroke-linecap="round" />
 					</svg>
 				</span>
-				<span class="label">{labels.install}</span>
+				<span class="label">{t.installApp}</span>
 				<span class="chevron" aria-hidden="true">›</span>
 			</button>
 		{/if}
@@ -244,7 +239,7 @@
 				onpointerup={stopHold}
 				onpointerleave={stopHold}
 				onpointercancel={stopHold}
-				aria-label="Hold three seconds to reset this profile"
+				aria-label={t.resetHold}
 			>
 				<span class="fill" style={`width:${hold * 100}%`}></span>
 				<span class="trash" aria-hidden="true">

@@ -92,7 +92,9 @@ export class Effects {
 			(p.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - t);
 			if (p.life >= p.maxLife) {
 				p.mesh.removeFromParent();
-				p.mesh.geometry.dispose();
+				// Geometry is shared by every spark; only the material is per
+				// particle, so disposing the geometry here would yank the buffer
+				// out from under the sparks still in flight.
 				(p.mesh.material as THREE.MeshBasicMaterial).dispose();
 				this.particles.splice(i, 1);
 			}
@@ -123,5 +125,13 @@ export class Effects {
 			(r.mesh.material as THREE.MeshBasicMaterial).dispose();
 		}
 		this.rings = [];
+	}
+
+	/** Releases the two shared geometries; call once when the game tears down. */
+	dispose(): void {
+		this.clear();
+		this.ringGeometry.dispose();
+		this.sparkGeometry.dispose();
+		this.root.removeFromParent();
 	}
 }

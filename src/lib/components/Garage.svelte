@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { CARS, isCarUnlocked, type CarId } from '#lib/game/cars';
+	import { CARS, type CarId } from '#lib/game/cars';
 	import type { TrackId } from '#lib/game/track';
-	import type { ProfileData } from '#lib/save';
+	import { messages } from '#lib/i18n';
+	import type { Lang, ProfileData } from '#lib/save';
 	import AvatarIcon from './AvatarIcon.svelte';
 	import CarIcon from './CarIcon.svelte';
 	import StarRow from './StarRow.svelte';
@@ -10,6 +11,7 @@
 	let {
 		profile,
 		selectedTrack,
+		lang = 'it',
 		onPick,
 		onTrack,
 		onGo,
@@ -18,17 +20,20 @@
 	}: {
 		profile: ProfileData;
 		selectedTrack: TrackId;
+		lang?: Lang;
 		onPick: (id: CarId) => void;
 		onTrack: (id: TrackId) => void;
 		onGo: () => void;
 		onBack: () => void;
 		onSettings: () => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
 <div class="screen garage">
 	<header class="bar">
-		<button class="round" onclick={onBack} aria-label="Back to profiles">
+		<button class="round" onclick={onBack} aria-label={t.back}>
 			<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
 				<path
 					d="M20 7 L11 16 L20 25"
@@ -45,10 +50,10 @@
 			<span class="mini-avatar">
 				<AvatarIcon id={profile.avatar} size={34} />
 			</span>
-			<StarRow stars={profile.bestStars} size={24} />
+			<StarRow stars={profile.bestStars} size={24} {lang} />
 		</div>
 
-		<button class="round" onclick={onSettings} aria-label="Settings">
+		<button class="round" onclick={onSettings} aria-label={t.settings}>
 			<svg viewBox="0 0 32 32" width="27" height="27" aria-hidden="true">
 				<path
 					d="M16 10.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm0 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"
@@ -67,14 +72,14 @@
 
 	<div class="cars">
 		{#each CARS as car}
-			{@const unlocked = isCarUnlocked(car, profile.bestStars)}
+			{@const unlocked = profile.unlocked.includes(car.id)}
 			{@const selected = profile.selectedCar === car.id}
 			<button
 				class="car-card"
 				class:locked={!unlocked}
 				class:selected
 				onclick={() => unlocked && onPick(car.id)}
-				aria-label={`${car.driver}${unlocked ? '' : ` locked, needs ${car.unlockedAt} stars`}`}
+				aria-label={unlocked ? car.driver : t.carLocked(car.driver, car.unlockedAt)}
 			>
 				<div class="car-art">
 					<CarIcon {car} size={136} />
@@ -120,9 +125,9 @@
 		{/each}
 	</div>
 
-	<TrackPicker selected={selectedTrack} onPick={onTrack} />
+	<TrackPicker selected={selectedTrack} {lang} onPick={onTrack} />
 
-	<button class="go" onclick={onGo} aria-label="Race">
+	<button class="go" onclick={onGo} aria-label={t.race}>
 		<svg viewBox="0 0 48 48" width="52" height="52" aria-hidden="true">
 			<path d="M17 10 L38 24 L17 38 Z" fill="#26313C" />
 		</svg>

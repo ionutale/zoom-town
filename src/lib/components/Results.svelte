@@ -1,27 +1,33 @@
 <script lang="ts">
 	import type { CarSpec } from '#lib/game/cars';
 	import type { RaceResult } from '#lib/game/game';
+	import { messages } from '#lib/i18n';
+	import type { Lang } from '#lib/save';
 	import CarIcon from './CarIcon.svelte';
+	import { modal } from './modal';
 	import StarRow from './StarRow.svelte';
 
 	let {
 		result,
 		newCar,
 		trophy,
+		lang = 'it',
 		onAgain,
 		onHome
 	}: {
 		result: RaceResult;
 		newCar: CarSpec | null;
 		trophy: boolean;
+		lang?: Lang;
 		onAgain: () => void;
 		onHome: () => void;
 	} = $props();
 
+	const t = $derived(messages(lang));
 	const confetti = Array.from({ length: 22 }, (_, i) => i);
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Race results">
+<div class="overlay" role="dialog" aria-modal="true" aria-label={t.raceResults} use:modal>
 	<div class="confetti" aria-hidden="true">
 		{#each confetti as piece}
 			<span style={`--i:${piece}`}></span>
@@ -30,7 +36,7 @@
 
 	<div class="card">
 		{#if trophy}
-			<div class="trophy" aria-label="Trophy">
+			<div class="trophy" aria-label={t.trophy}>
 				<svg viewBox="0 0 120 120" width="110" height="110" aria-hidden="true">
 					<path
 						d="M34 18 H86 V36 C86 55 75 66 60 66 C45 66 34 55 34 36 Z"
@@ -67,9 +73,9 @@
 			</div>
 		{/if}
 
-		<StarRow stars={result.stars} size={64} animate />
+		<StarRow stars={result.stars} size={64} animate {lang} />
 
-		<div class="tally" aria-label={`${result.balloons} of ${result.totalBalloons} balloons`}>
+		<div class="tally" aria-label={t.balloonTally(result.balloons, result.totalBalloons)}>
 			<svg viewBox="0 0 24 30" width="26" height="32" aria-hidden="true">
 				<ellipse cx="12" cy="12" rx="9" ry="11" fill="#E8433F" stroke="#26313C" stroke-width="2" />
 				<path d="M10 23 L12 27 L14 23" fill="#FFF6E3" stroke="#26313C" stroke-width="1.5" />
@@ -86,7 +92,7 @@
 		{/if}
 
 		<div class="actions">
-			<button class="action" onclick={onAgain} aria-label="Race again">
+			<button class="action" onclick={onAgain} aria-label={t.raceAgain}>
 				<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
 					<path
 						d="M38 24a14 14 0 1 1-4.1-9.9"
@@ -105,7 +111,7 @@
 					/>
 				</svg>
 			</button>
-			<button class="action home" onclick={onHome} aria-label="Back to garage">
+			<button class="action home" onclick={onHome} aria-label={t.backToGarage}>
 				<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
 					<path
 						d="M8 23 L24 9 L40 23"

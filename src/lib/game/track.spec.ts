@@ -23,10 +23,7 @@ describe('tracks', () => {
 	it('wraps t and distance', () => {
 		expect(track.sampleAt(1).t).toBe(0);
 		expect(track.sampleAt(-0.1).t).toBeCloseTo(0.9, 5);
-		expect(track.sampleAtDistance(track.length + 10).t).toBeCloseTo(
-			10 / track.length,
-			2
-		);
+		expect(track.sampleAtDistance(track.length + 10).t).toBeCloseTo(10 / track.length, 2);
 	});
 
 	it('measures lateral offset from the centreline', () => {
@@ -50,5 +47,13 @@ describe('tracks', () => {
 		expect(Number.isFinite(sample.pos.x)).toBe(true);
 		expect(Number.isFinite(sample.pos.z)).toBe(true);
 		expect(sample.normal).toBeInstanceOf(THREE.Vector3);
+	});
+
+	it('answers “is this far from the road” without a full scan', () => {
+		const onRoad = track.sampleAt(0.5).pos;
+		expect(track.isFartherThan(onRoad, 1)).toBe(false);
+
+		const offRoad = onRoad.clone().addScaledVector(track.sampleAt(0.5).normal, 40);
+		expect(track.isFartherThan(offRoad, track.halfWidth + 5)).toBe(true);
 	});
 });

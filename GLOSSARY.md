@@ -29,11 +29,11 @@ _Avoid_: shop, selection, garage menu
 ### The race
 
 **Race**:
-One attempt at the circuit, made of two laps.
+One attempt at the circuit, made of three laps.
 _Avoid_: run, match, level, game
 
 **Lap**:
-One complete pass around the circuit. A race is two laps.
+One complete pass around the circuit. A race is three laps.
 _Avoid_: round, circuit, loop
 
 **Track**:

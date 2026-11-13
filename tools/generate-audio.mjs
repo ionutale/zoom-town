@@ -256,7 +256,12 @@ async function writeManifest() {
 		),
 		music: { town: 'music/town-loop.m4a' }
 	};
-	await writeFile(path.join(AUDIO, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+	// Written into the repo (not shipped): it is the provenance record for the
+	// generated set, and the game never fetches it at runtime.
+	await writeFile(
+		path.join(ROOT, '.audio-raw', 'manifest.json'),
+		`${JSON.stringify(manifest, null, 2)}\n`
+	);
 }
 
 await mkdir(AUDIO, { recursive: true });

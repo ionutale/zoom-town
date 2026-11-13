@@ -40,6 +40,9 @@ export type SfxKey = (typeof SFX_KEYS)[number];
 
 const BASE = `${import.meta.env.BASE_URL ?? '/'}audio/`;
 
+const MUSIC_GAIN = 0.18;
+const MUSIC_DUCKED = 0.05;
+
 function pathFor(key: string): string {
 	return `${BASE}${key}`;
 }
@@ -66,7 +69,20 @@ export class AudioEngine {
 
 	constructor(lang: Lang = 'it') {
 		this.lang = lang;
-		this.preload();
+		// Deferred so the first frame paints before 1.2 MB of audio competes for
+		// bandwidth. `unlock()` forces it early if the child reaches the race
+		// before the idle callback fires.
+		this.schedulePreload();
+	}
+
+	private schedulePreload(): void {
+		if (typeof window === 'undefined') return;
+		const idle = window.requestIdleCallback;
+		if (typeof idle === 'function') {
+			idle.call(window, () => this.preload(), { timeout: 1500 });
+		} else {
+			setTimeout(() => this.preload(), 400);
+		}
 	}
 
 	preload(): void {
@@ -117,6 +133,7 @@ export class AudioEngine {
 			this.engineGain.connect(this.master);
 		}
 		if (this.ctx.state === 'suspended') await this.ctx.resume();
+		this.preload();
 		await this.preloading;
 		await this.decode();
 		if (this.soundOn && this.wantsMusic) this.startMusic();
@@ -138,6 +155,8 @@ export class AudioEngine {
 		).then(() => {
 			this.ready = this.buffers.size > 0;
 			this.decoding = null;
+			// The encoded bytes are no longer needed once decoded.
+			this.raw.clear();
 		});
 		return this.decoding;
 	}
@@ -194,12 +213,12 @@ export class AudioEngine {
 		source.onended = () => {
 			if (this.voiceSource === source) this.voiceSource = null;
 			if (this.musicGain && this.ctx) {
-				this.musicGain.gain.setTargetAtTime(0.18, this.ctx.currentTime, 0.12);
+				this.musicGain.gain.setTargetAtTime(MUSIC_GAIN, this.ctx.currentTime, 0.12);
 			}
 		};
 		this.voiceSource = source;
 		if (this.musicGain && this.ctx) {
-			this.musicGain.gain.setTargetAtTime(0.05, this.ctx.currentTime, 0.08);
+			this.musicGain.gain.setTargetAtTime(MUSIC_DUCKED, this.ctx.currentTime, 0.08);
 		}
 		source.start();
 	}
@@ -212,6 +231,11 @@ export class AudioEngine {
 				// already stopped
 			}
 			this.voiceSource = null;
+		}
+		// stop() never fires onended, so an interrupted line would otherwise
+		// leave the music ducked for the rest of the session.
+		if (this.musicGain && this.ctx) {
+			this.musicGain.gain.setTargetAtTime(MUSIC_GAIN, this.ctx.currentTime, 0.12);
 		}
 	}
 

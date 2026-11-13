@@ -13,8 +13,10 @@ import type { Track, TrackTheme } from './track';
 type Rand = () => number;
 type NearStart = (x: number, z: number, radius: number) => boolean;
 
+const sceneryPoint = new THREE.Vector3();
+
 function offTrack(track: Track, x: number, z: number, clearance: number): boolean {
-	return track.distanceFromTrack(new THREE.Vector3(x, 0, z)) > track.halfWidth + clearance;
+	return track.isFartherThan(sceneryPoint.set(x, 0, z), track.halfWidth + clearance);
 }
 
 function at(track: Track, t: number, lateral: number): { pos: THREE.Vector3; yaw: number } {
@@ -157,9 +159,7 @@ function buildBenches(track: Track): THREE.Group {
 		const t = 0.1 + (i / count) * 0.82;
 		const side = i % 2 === 0 ? 1 : -1;
 		const sample = track.sampleAt(t);
-		const pos = sample.pos
-			.clone()
-			.addScaledVector(sample.normal, (track.halfWidth + 2.9) * side);
+		const pos = sample.pos.clone().addScaledVector(sample.normal, (track.halfWidth + 2.9) * side);
 		// The bench faces +Z, so point it at the road.
 		const facing = sample.normal.clone().multiplyScalar(-side);
 		quat.setFromAxisAngle(up, Math.atan2(facing.x, facing.z));
@@ -233,15 +233,7 @@ function buildMarketStall(track: Track): THREE.Group {
 	];
 	for (let i = 0; i < 4; i++) {
 		parts.push(
-			box(
-				1.1,
-				0.12,
-				2.1,
-				i % 2 === 0 ? COLORS.red : COLORS.cream,
-				-1.65 + i * 1.1,
-				2.68,
-				0.05
-			)
+			box(1.1, 0.12, 2.1, i % 2 === 0 ? COLORS.red : COLORS.cream, -1.65 + i * 1.1, 2.68, 0.05)
 		);
 	}
 	parts.push(
@@ -321,7 +313,11 @@ function buildDinoNests(track: Track): THREE.Group {
 				new THREE.MeshLambertMaterial({ color: COLORS.cream })
 			);
 			egg.scale.set(1, 1.35, 1);
-			egg.position.set(Math.cos((i / 3) * Math.PI * 2) * 0.42, 0.5, Math.sin((i / 3) * Math.PI * 2) * 0.42);
+			egg.position.set(
+				Math.cos((i / 3) * Math.PI * 2) * 0.42,
+				0.5,
+				Math.sin((i / 3) * Math.PI * 2) * 0.42
+			);
 			parts.push(egg);
 		}
 		all.push(...worldParts(parts, pos, yaw));

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
 	import type { Lang } from '#lib/save';
 
 	let {
@@ -10,6 +11,8 @@
 		onOpen: () => void;
 		onDismiss: () => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
 <div class="banner">
@@ -44,9 +47,9 @@
 				/>
 			</svg>
 		</span>
-		<span>{lang === 'it' ? 'Installa Zoom Town' : 'Install Zoom Town'}</span>
+		<span>{t.installTitle}</span>
 	</button>
-	<button class="x" onclick={onDismiss} aria-label={lang === 'it' ? 'Chiudi' : 'Dismiss'}>
+	<button class="x" onclick={onDismiss} aria-label={t.dismiss}>
 		<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
 			<path d="M6 6 L18 18 M18 6 L6 18" stroke="#26313C" stroke-width="3" stroke-linecap="round" />
 		</svg>

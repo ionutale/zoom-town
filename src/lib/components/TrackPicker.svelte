@@ -1,17 +1,23 @@
 <script lang="ts">
 	import { TRACK_DEFS, type TrackId } from '#lib/game/track';
+	import { messages } from '#lib/i18n';
+	import type { Lang } from '#lib/save';
 	import TrackMiniMap from './TrackMiniMap.svelte';
 
 	let {
 		selected,
+		lang = 'it',
 		onPick
 	}: {
 		selected: TrackId;
+		lang?: Lang;
 		onPick: (id: TrackId) => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
-<div class="track-picker" aria-label="Choose a circuit">
+<div class="track-picker" aria-label={t.chooseCircuit}>
 	{#each TRACK_DEFS as track (track.id)}
 		<button
 			class="track"

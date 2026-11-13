@@ -24,6 +24,7 @@
 	import SettingsSheet from '#lib/components/SettingsSheet.svelte';
 	import Tutorial from '#lib/components/Tutorial.svelte';
 	import { isIosDevice, isIosSafari, isStandalone } from '#lib/pwa';
+	import { messages } from '#lib/i18n';
 
 	type Screen = 'profiles' | 'garage' | 'race';
 	type TutorialMode = 'first' | 'replay' | null;
@@ -54,12 +55,18 @@
 		iosDevice && !installed && !installDismissed && screen === 'profiles' && !installOpen
 	);
 
+	/** True while any overlay owns the screen, so the game behind it is inert. */
+	let worldInert = $derived(
+		result !== null || paused || tutorialOpen || settingsOpen || installOpen || rotate
+	);
+
 	const tutorialVoiceKeys = ['tutorial_steer', 'tutorial_boost', 'tutorial_balloons'] as const;
 
 	let profile = $derived(slot !== null ? save.profiles[slot] : null);
 	let selectedCar = $derived(profile?.selectedCar ?? 'bear');
 	let selectedTrack = $derived(profile?.selectedTrack ?? DEFAULT_TRACK_ID);
 	let newCarSpec = $derived(newCarId ? CAR_BY_ID[newCarId] : null);
+	const t = $derived(messages(save.settings.lang));
 
 	function blankHud(carId: CarId = 'bear'): HudState {
 		return {
@@ -92,6 +99,7 @@
 			installDismissed = false;
 		}
 		document.documentElement.classList.toggle('reduced-motion', save.settings.reducedMotion);
+		document.documentElement.lang = save.settings.lang;
 		const existingProfile = save.profiles.find((p) => p !== null);
 		const initialCar = existingProfile?.selectedCar ?? 'bear';
 		const initialTrack = existingProfile?.selectedTrack ?? DEFAULT_TRACK_ID;
@@ -143,7 +151,10 @@
 			save: () => save,
 			screen: () => screen
 		};
-		(window as unknown as Record<string, unknown>).__zoomtown = debug;
+		// Debug hooks are for the Playwright suite, not for the shipped game.
+		if (new URLSearchParams(location.search).has('debug')) {
+			(window as unknown as Record<string, unknown>).__zoomtown = debug;
+		}
 
 		return () => {
 			rotateQuery.removeEventListener('change', updateRotate);
@@ -158,7 +169,7 @@
 	function selectProfile(index: number) {
 		let next = save.profiles[index];
 		if (!next) {
-			next = createProfile(index, AVATARS[index].id);
+			next = createProfile(AVATARS[index].id);
 			const profiles = [...save.profiles];
 			profiles[index] = next;
 			save = { ...save, profiles };
@@ -168,6 +179,7 @@
 		screen = 'garage';
 		game?.unlockAudio();
 		game?.playSfx('click');
+		game?.playVoice('pick_driver');
 		game?.attract(next.selectedCar, next.selectedTrack);
 	}
 
@@ -352,6 +364,7 @@
 		save = { ...save, settings };
 		storeSave(save);
 		game?.setLang(lang);
+		document.documentElement.lang = lang;
 	}
 
 	function resetCurrentProfile() {
@@ -411,37 +424,55 @@
 
 <div class="stage">
 	<div class="frame">
-		<canvas bind:this={canvas} class="game-canvas" aria-label="Zoom Town race track"></canvas>
+		<div class="world" inert={worldInert}>
+			<canvas bind:this={canvas} class="game-canvas" aria-label={t.raceTrack}></canvas>
 
-		{#if screen === 'profiles'}
-			<ProfilePicker {save} onPick={selectProfile} onSettings={() => (settingsOpen = true)} />
-		{:else if screen === 'garage' && profile}
-			<Garage
-				{profile}
-				{selectedTrack}
-				onPick={pickCar}
-				onTrack={pickTrack}
-				onGo={go}
-				onBack={backToProfiles}
-				onSettings={() => (settingsOpen = true)}
-			/>
-		{:else if screen === 'race'}
-			<Hud
-				{hud}
-				advanced={save.settings.advancedDriving}
-				inactive={result !== null || paused || tutorialOpen}
-				onSteer={(value) => game?.setSteer(value)}
-				onBoost={() => game?.requestBoost()}
-				onPause={pauseGame}
-			/>
-			{#if result}
-				<Results {result} newCar={newCarSpec} {trophy} onAgain={again} onHome={home} />
+			{#if screen === 'profiles'}
+				<ProfilePicker
+					{save}
+					lang={save.settings.lang}
+					onPick={selectProfile}
+					onSettings={() => (settingsOpen = true)}
+				/>
+			{:else if screen === 'garage' && profile}
+				<Garage
+					{profile}
+					{selectedTrack}
+					lang={save.settings.lang}
+					onPick={pickCar}
+					onTrack={pickTrack}
+					onGo={go}
+					onBack={backToProfiles}
+					onSettings={() => (settingsOpen = true)}
+				/>
+			{:else if screen === 'race'}
+				<Hud
+					{hud}
+					lang={save.settings.lang}
+					advanced={save.settings.advancedDriving}
+					inactive={result !== null || paused || tutorialOpen}
+					onSteer={(value) => game?.setSteer(value)}
+					onBoost={() => game?.requestBoost()}
+					onPause={pauseGame}
+				/>
 			{/if}
+		</div>
+
+		{#if result && screen === 'race'}
+			<Results
+				{result}
+				newCar={newCarSpec}
+				{trophy}
+				lang={save.settings.lang}
+				onAgain={again}
+				onHome={home}
+			/>
 		{/if}
 
 		{#if paused && !result && screen === 'race'}
 			<PauseMenu
 				sound={save.settings.sound}
+				lang={save.settings.lang}
 				onResume={resumeGame}
 				onRestart={restartRace}
 				onHome={home}
@@ -479,6 +510,7 @@
 		{#if settingsOpen}
 			<SettingsSheet
 				settings={save.settings}
+				lang={save.settings.lang}
 				hasProfile={profile !== null}
 				showInstall={iosDevice && !installed}
 				onSound={toggleSound}
@@ -516,6 +548,10 @@
 		max-width: 560px;
 		overflow: hidden;
 		background: var(--zt-sky);
+	}
+	.world {
+		position: absolute;
+		inset: 0;
 	}
 	.game-canvas {
 		display: block;

@@ -15,17 +15,35 @@
 
 - Source: `../music-sfx-voice-studio` on `127.0.0.1:7910` (Qwen3-TTS, Stable Audio 3, procedural SFX).
 - Regenerate: `pnpm audio --voices`, `pnpm audio --sfx`, `pnpm audio --music`, or `pnpm audio --all --force`.
-- Output: `static/audio/`; the manifest is `static/audio/manifest.json`.
+- Output: `static/audio/`; the generated list is recorded in `.audio-raw/manifest.json` (provenance only, never fetched at runtime).
 - Italian and English voice files must stay in parity.
 
 ## Checks before claiming done
 
 ```sh
 pnpm check
+pnpm lint
 pnpm test:unit
 pnpm test:e2e
 pnpm build
 ```
+
+`pnpm test:e2e` builds first and runs Playwright against the production build with
+`?debug=1`; the debug hook does not exist in a normal page load.
+
+## Code rules
+
+- **All UI copy lives in `src/lib/i18n.ts`**, Italian and English in parity. No new
+  inline `lang === 'it' ? … : …` in components, and every accessible name comes
+  from the same table.
+- **Anything removed from the scene is disposed.** Use `disposeObject3D` from
+  `src/lib/game/dispose.ts` when dropping cars, rivals, balloons or a track.
+  Shared resources (wheel mesh, balloon trim) are marked once with
+  `markSharedResource`; never dispose a shared geometry.
+- **Overlays use `use:modal`** (`src/lib/components/modal.ts`) so focus is
+  trapped, Escape closes, and the game behind is `inert`.
+- **`window.__zoomtown` is test-only** and is installed only when the URL has
+  `?debug=1`.
 
 ## Sources of truth
 

@@ -27,6 +27,11 @@ pnpm audio        # regenerate voice/SFX/music with the local studio
 pnpm icons        # regenerate PWA icons from the inline SVG
 ```
 
+`pnpm test:e2e` builds first and drives the production build through Playwright. The
+`window.__zoomtown` hook the suite uses only exists when the page is opened with
+`?debug=1`, so a normal load exposes no cheat surface. UI copy and accessible names
+live in `src/lib/i18n.ts` (IT/EN in parity); `<html lang>` follows the saved language.
+
 ## Audio
 
 All audio is generated locally and committed under `static/audio`; the game never uses browser speech synthesis and never fetches audio from a third party at runtime.

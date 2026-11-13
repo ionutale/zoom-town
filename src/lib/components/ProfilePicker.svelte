@@ -1,22 +1,27 @@
 <script lang="ts">
 	import { AVATARS } from '#lib/game/cars';
-	import type { SaveData } from '#lib/save';
+	import { messages } from '#lib/i18n';
+	import type { Lang, SaveData } from '#lib/save';
 	import AvatarIcon from './AvatarIcon.svelte';
 	import StarRow from './StarRow.svelte';
 
 	let {
 		save,
+		lang = 'it',
 		onPick,
 		onSettings
 	}: {
 		save: SaveData;
+		lang?: Lang;
 		onPick: (slot: number) => void;
 		onSettings: () => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 </script>
 
 <div class="screen profiles">
-	<button class="gear" onclick={onSettings} aria-label="Settings">
+	<button class="gear" onclick={onSettings} aria-label={t.settings}>
 		<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
 			<path
 				d="M16 10.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Zm0 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"
@@ -46,7 +51,7 @@
 				class="slot"
 				class:empty={!profile}
 				onclick={() => onPick(index)}
-				aria-label={`Profile ${index + 1}`}
+				aria-label={t.profile(index + 1)}
 			>
 				<span class="disc" style={`--ring:${avatar.color}`}>
 					<AvatarIcon id={avatar.id} size={78} color={profile ? undefined : '#D9D2C2'} />
@@ -55,7 +60,7 @@
 					{/if}
 				</span>
 				{#if profile}
-					<StarRow stars={profile.bestStars} size={22} />
+					<StarRow stars={profile.bestStars} size={22} {lang} />
 				{:else}
 					<span class="new-dot" aria-hidden="true"></span>
 				{/if}

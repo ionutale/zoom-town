@@ -3,6 +3,7 @@ import { AudioEngine } from './audio';
 import { Balloons } from './balloons';
 import { ChaseCamera } from './camera';
 import { BOOST_DURATION, CRUISE_SPEED, MAX_CHARGES, PlayerCar } from './car';
+import { disposeObject3D } from './dispose';
 import { LAPS, TOTAL_BALLOONS, starsForBalloons } from './rules';
 import type { CarId } from './cars';
 import { Effects } from './effects';
@@ -165,6 +166,7 @@ export class ZoomTownGame {
 		this.steer = 0;
 		this.lastLap = 1;
 		this.resultSent = false;
+		this.lastRailContact = false;
 		this.hudTimer = 0;
 		const near = this.track.nearestSample(this.player.pos, this.player.prevIndex);
 		this.cameraRig.setChase(this.player, near);
@@ -307,7 +309,8 @@ export class ZoomTownGame {
 			charges: this.player.charges,
 			steer: this.steer,
 			lateral: this.track.nearestSample(this.player.pos, this.player.prevIndex).lateral,
-			sampleDistance: this.track.nearestSample(this.player.pos, this.player.prevIndex).sample.distance,
+			sampleDistance: this.track.nearestSample(this.player.pos, this.player.prevIndex).sample
+				.distance,
 			track: this.track.def.id,
 			prevIndex: this.player.prevIndex,
 			touchingRail: this.player.touchingRail,
@@ -323,20 +326,22 @@ export class ZoomTownGame {
 			frames: this.frames,
 			calls: this.renderer.info.render.calls,
 			triangles: this.renderer.info.render.triangles,
+			geometries: this.renderer.info.memory.geometries,
+			textures: this.renderer.info.memory.textures,
 			position: { x: this.player.pos.x, z: this.player.pos.z }
 		};
 	}
 
-
 	setTrack(trackId: TrackId): void {
 		if (this.track.def.id === trackId) return;
 		this.clearRivals();
-		this.player.visual.group.removeFromParent();
+		this.player.dispose();
+		disposeObject3D(this.balloons.root);
 		this.balloons.root.removeFromParent();
 		this.trackGroup.removeFromParent();
 		this.sceneryGroup.removeFromParent();
-		this.disposeGroup(this.trackGroup);
-		this.disposeGroup(this.sceneryGroup);
+		disposeObject3D(this.trackGroup);
+		disposeObject3D(this.sceneryGroup);
 
 		this.track = getTrack(trackId);
 		this.trackGroup = buildTrackGroup(this.track);
@@ -353,23 +358,14 @@ export class ZoomTownGame {
 		this.effects.clear();
 	}
 
-	private disposeGroup(group: THREE.Group): void {
-		group.traverse((object) => {
-			if (!(object instanceof THREE.Mesh)) return;
-			object.geometry.dispose();
-			const materials = Array.isArray(object.material) ? object.material : [object.material];
-			for (const material of materials) material.dispose();
-		});
-	}
-
 	private replaceCar(carId: CarId): void {
-		this.player.visual.group.removeFromParent();
+		this.player.dispose();
 		this.player = new PlayerCar(carId, this.track, !this.options.advancedDriving);
 		this.scene.add(this.player.visual.group);
 	}
 
 	private clearRivals(): void {
-		for (const rival of this.rivals) rival.visual.group.removeFromParent();
+		for (const rival of this.rivals) rival.dispose();
 		this.rivals = [];
 	}
 
@@ -490,8 +486,10 @@ export class ZoomTownGame {
 		this.hudTimer += dt;
 		if (!force && this.hudTimer < 0.05) return;
 		this.hudTimer = 0;
-		const near = this.track.nearestSample(this.player.pos, this.player.prevIndex);
-		const playerProgress = Math.min(1, Math.max(0, this.player.raceDistance / (this.track.length * LAPS)));
+		const playerProgress = Math.min(
+			1,
+			Math.max(0, this.player.raceDistance / (this.track.length * LAPS))
+		);
 		const rivalProgress = this.rivals.map((rival) =>
 			Math.min(1, Math.max(0, (rival.distance - rival.startDistance) / (this.track.length * LAPS)))
 		);
@@ -512,7 +510,6 @@ export class ZoomTownGame {
 			carId: this.player.spec.id,
 			carColor: this.player.spec.color
 		});
-		void near;
 	}
 
 	dispose(): void {
@@ -520,6 +517,13 @@ export class ZoomTownGame {
 		cancelAnimationFrame(this.raf);
 		this.resizeObserver?.disconnect();
 		window.removeEventListener('resize', this.resize);
+		this.clearRivals();
+		this.player.dispose();
+		disposeObject3D(this.balloons.root);
+		disposeObject3D(this.trackGroup);
+		disposeObject3D(this.sceneryGroup);
+		this.effects.dispose();
+		this.scene.clear();
 		this.audio.dispose();
 		this.renderer.dispose();
 	}

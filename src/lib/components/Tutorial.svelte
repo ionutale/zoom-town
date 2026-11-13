@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { messages } from '#lib/i18n';
 	import type { Lang } from '#lib/save';
+	import { modal } from './modal';
 
 	let {
 		lang,
@@ -9,24 +11,13 @@
 	}: {
 		lang: Lang;
 		advanced?: boolean;
-		onDone: (skipped: boolean) => void;
+		onDone: () => void;
 		onStep?: (index: number) => void;
 	} = $props();
 
-	let step = $state(0);
+	const t = $derived(messages(lang));
 
-	const lines: Record<Lang, string[]> = {
-		it: [
-			'Tieni premuto a sinistra o a destra per sterzare.',
-			'Tocca il pulsante grande per il turbo.',
-			'Raccogli i palloncini per guadagnare stelle.'
-		],
-		en: [
-			'Hold left or right to steer.',
-			'Tap the big button to boost.',
-			'Collect balloons to earn stars.'
-		]
-	};
+	let step = $state(0);
 
 	$effect(() => {
 		onStep?.(step);
@@ -36,25 +27,24 @@
 		if (step < 2) {
 			step++;
 		} else {
-			finish(false);
+			onDone();
 		}
 	}
 
-	function finish(skipped: boolean) {
-		onDone(skipped);
-	}
-
-	const dragLines: Record<Lang, string> = {
-		it: 'Trascina il dito a sinistra o a destra per sterzare.',
-		en: 'Drag your finger left or right to steer.'
-	};
-
-	const caption = $derived(advanced && step === 0 ? dragLines[lang] : lines[lang][step]);
+	const caption = $derived(
+		advanced && step === 0 ? t.tutorialDrag : (t.tutorialSteps[step] ?? t.tutorialSteps[0])
+	);
 </script>
 
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Tutorial">
+<div
+	class="overlay"
+	role="dialog"
+	aria-modal="true"
+	aria-label={t.tutorialTitle}
+	use:modal={{ onEscape: onDone }}
+>
 	<div class="card">
-		<button class="skip" onclick={() => finish(true)} aria-label="Skip tutorial">
+		<button class="skip" onclick={onDone} aria-label={t.skipTutorial}>
 			<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
 				<path
 					d="M8 8 L24 24 M24 8 L8 24"
@@ -181,7 +171,7 @@
 					<span class:on={dot <= step}></span>
 				{/each}
 			</div>
-			<button class="next" onclick={next} aria-label={step < 2 ? 'Next' : 'Start racing'}>
+			<button class="next" onclick={next} aria-label={step < 2 ? t.next : t.startRacing}>
 				{#if step < 2}
 					<svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
 						<path

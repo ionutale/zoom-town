@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
 	<head>
 		<meta charset="utf-8" />
 		<meta
@@ -19,7 +19,11 @@
 				place-items: center;
 				padding: 24px;
 				background: #7ec8f2;
-				font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+				font-family:
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					sans-serif;
 				color: #26313c;
 			}
 			#zt-boot[hidden] {
@@ -75,11 +79,11 @@
 	<body data-sveltekit-preload-data="hover">
 		<div id="zt-boot" hidden>
 			<div class="zt-boot-card">
-				<h1>Il gioco non si è avviato.</h1>
-				<p>The game didn't start.</p>
+				<h1 lang="it">Il gioco non si è avviato.</h1>
+				<p lang="en">The game didn't start.</p>
 				<div class="zt-boot-actions">
-					<button type="button" onclick="location.reload()">Ricarica</button>
-					<button type="button" class="secondary" id="zt-boot-reset">Ripristina</button>
+					<button type="button" onclick="location.reload()">Ricarica / Reload</button>
+					<button type="button" class="secondary" id="zt-boot-reset">Ripristina / Reset</button>
 				</div>
 				<p id="zt-boot-detail"></p>
 			</div>
@@ -88,6 +92,9 @@
 		<script>
 			(function () {
 				var shown = false;
+				function mounted() {
+					return !!document.querySelector('.stage');
+				}
 				function describe(value) {
 					if (!value) return '';
 					if (typeof value === 'string') return value;
@@ -99,7 +106,10 @@
 					}
 				}
 				function show(reason) {
-					if (shown) return;
+					// Once the game has mounted, a stray error is the app's problem,
+					// not a boot failure: covering a working game with a dead-end
+					// card is worse than letting it keep running.
+					if (shown || mounted()) return;
 					shown = true;
 					var panel = document.getElementById('zt-boot');
 					if (panel) panel.hidden = false;
@@ -110,7 +120,9 @@
 					'error',
 					function (event) {
 						var target = event.target;
-						if (target && target.tagName === 'SCRIPT') {
+						if (target && target !== window) {
+							// A failed stylesheet, icon or image cannot stop the game.
+							if (target.tagName !== 'SCRIPT') return;
 							show('script: ' + (target.src || 'inline'));
 							return;
 						}
@@ -123,7 +135,7 @@
 				});
 				// If the app never mounts, surface it instead of leaving a dark screen.
 				window.setTimeout(function () {
-					if (!document.querySelector('.stage')) show('timeout: app did not mount');
+					if (!mounted()) show('timeout: app did not mount');
 				}, 8000);
 				document.addEventListener('click', function (event) {
 					var target = event.target;

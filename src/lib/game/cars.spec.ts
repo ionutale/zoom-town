@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AVATARS, CARS, carsForStars, isCarUnlocked } from './cars';
+import { AVATARS, CARS, carsForStars } from './cars';
 
 describe('cars and unlocks', () => {
 	it('starts with Bear only', () => {
@@ -14,8 +14,8 @@ describe('cars and unlocks', () => {
 
 	it('never locks a car that is already available', () => {
 		for (const car of CARS) {
-			expect(isCarUnlocked(car, car.unlockedAt)).toBe(true);
-			expect(isCarUnlocked(car, 3)).toBe(true);
+			expect(carsForStars(car.unlockedAt)).toContain(car.id);
+			expect(carsForStars(3)).toContain(car.id);
 		}
 	});
 

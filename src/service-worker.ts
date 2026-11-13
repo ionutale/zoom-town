@@ -91,8 +91,7 @@ async function navigationResponse(request: Request): Promise<Response> {
 	} catch {
 		// Offline or slow network: fall through to the cached shell.
 	}
-	const cached =
-		(await cache.match(request, { ignoreSearch: true })) ?? (await cache.match('/'));
+	const cached = (await cache.match(request, { ignoreSearch: true })) ?? (await cache.match('/'));
 	return cached ?? Response.error();
 }
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { disposeObject3D, markSharedResource } from './dispose';
 import { mergeMeshesByMaterial } from './merge';
 import { CAR_BY_ID, type CarId, type CarSpec } from './cars';
 import { COLORS } from './palette';
@@ -20,6 +21,28 @@ export const MAX_CHARGES = 3;
 export const ACCELERATION = 6;
 export const STEER_LOW = 2.2;
 export const STEER_HIGH = 1.6;
+
+/** How far the car drifts toward the road tangent without help, per second. */
+const TANGENT_FOLLOW = 0.08;
+const RAIL_SLIDE_ALIGN = 0.9;
+const BRAKE_MULTIPLIER = 2.2;
+const COAST_BRAKE_MULTIPLIER = 2;
+
+/** Auto-steer assist (assisted mode only). */
+const ASSIST_TRIGGER_SECONDS = 2;
+const ASSIST_ALIGN_RATE = 4.2;
+const ASSIST_PULL_RATE = 2.6;
+const ASSIST_CENTRE_LATERAL = 0.55;
+const ASSIST_MIN_SECONDS = 0.8;
+const ASSIST_MAX_SECONDS = 4;
+
+/** Auto-recover thresholds. */
+const WRONG_WAY_DOT = -0.2;
+const WRONG_WAY_SECONDS = 1.5;
+const STUCK_SPEED = 0.4;
+const STUCK_SECONDS = 2;
+const SAFE_SAMPLE_SECONDS = 1;
+const SAFE_MARGIN = 0.6;
 
 export function targetSpeedFor(
 	advanced: boolean,
@@ -74,6 +97,10 @@ const wheelSpinGeometry = (() => {
 })();
 
 const wheelMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+// Every car (player and rivals) spins the same wheel mesh data, so it must
+// survive a single car being disposed and rebuilt.
+markSharedResource(wheelSpinGeometry, wheelMaterial);
 
 function box(w: number, h: number, d: number, color: number, x = 0, y = 0, z = 0): THREE.Mesh {
 	const mesh = new THREE.Mesh(
@@ -241,9 +268,7 @@ function shortestAngle(angle: number): number {
 
 export interface CarUpdate {
 	near: NearestResult;
-	boostStarted: boolean;
 	railContact: boolean;
-	autoSteer: boolean;
 }
 
 export class PlayerCar {
@@ -308,15 +333,22 @@ export class PlayerCar {
 		this.visual.group.rotation.y = this.heading;
 	}
 
-	setCar(carId: CarId): void {
-		this.spec = CAR_BY_ID[carId];
+	/** Releases this car's own GPU buffers. Shared wheel resources survive. */
+	dispose(): void {
+		disposeObject3D(this.visual.group);
 		this.visual.group.removeFromParent();
-		this.visual = createCarVisual(this.spec, true);
-		this.reset();
 	}
 
 	addCharge(): void {
 		this.charges = Math.min(MAX_CHARGES, this.charges + 1);
+	}
+
+	/** Applies a sideways shove (rival bump) without letting the car leave the road. */
+	nudge(dx: number, dz: number): void {
+		this.pos.x += dx;
+		this.pos.z += dz;
+		const near = this.track.nearestSample(this.pos, this.prevIndex);
+		this.applyGuardrail(near, Math.atan2(near.sample.tangent.x, near.sample.tangent.z));
 	}
 
 	requestBoost(): boolean {
@@ -326,152 +358,181 @@ export class PlayerCar {
 		return true;
 	}
 
-	get lapProgress(): number {
-		return THREE.MathUtils.clamp(this.raceDistance / this.track.length, 0, LAPS);
-	}
-
 	update(dt: number, steer: number, frozen: boolean): CarUpdate {
 		const before = this.track.nearestSample(this.pos, this.prevIndex);
 		const tangentHeading = Math.atan2(before.sample.tangent.x, before.sample.tangent.z);
-		const railContact = this.touchingRail;
 
 		if (!frozen && !this.finished) {
-			const advanced = !this.assist;
-			if (advanced && !railContact && Math.abs(steer) < STRAIGHT_STEER) {
-				// Long, clean straights let the advanced car creep past 50 km/h.
-				this.straightTime = Math.min(ADVANCED_RAMP_SECONDS, this.straightTime + dt);
-			} else {
-				this.straightTime = 0;
-			}
-			// Walls bite harder in advanced: the car has to earn its speed back.
-			const targetSpeed = targetSpeedFor(advanced, this.straightTime, this.boostTime > 0, railContact);
-			const maxDelta = ACCELERATION * dt;
-			const brakeDelta = ACCELERATION * 2.2 * dt;
-			if (this.speed < targetSpeed) {
-				this.speed = Math.min(targetSpeed, this.speed + maxDelta);
-			} else {
-				this.speed = Math.max(targetSpeed, this.speed - brakeDelta);
-			}
-
-			const speedFactor = THREE.MathUtils.clamp(this.speed / CRUISE_SPEED, 0, 1);
-			const steerRate = THREE.MathUtils.lerp(STEER_LOW, STEER_HIGH, speedFactor);
-			// Screen-right is world -X when the camera looks along +Z; flip the
-			// heading sign so the on-screen arrows match the car's direction.
-			this.heading -= steer * steerRate * dt;
-			this.steerVisual += (steer - this.steerVisual) * Math.min(1, dt * 10);
-
-			// No permanent auto-follow. The car only follows the tangent a tiny
-			// amount; the real auto-steer assist is earned by hitting a rail.
-			const assist = 0.08;
-			this.heading += shortestAngle(tangentHeading - this.heading) * Math.min(1, assist * dt);
-
-			const forwardX = Math.sin(this.heading);
-			const forwardZ = Math.cos(this.heading);
-			this.pos.x += forwardX * this.speed * dt;
-			this.pos.z += forwardZ * this.speed * dt;
-
-			const near = this.track.nearestSample(this.pos, before.index);
-			if (Math.abs(near.lateral) > this.track.maxLateral) {
-				const sign = Math.sign(near.lateral) || 1;
-				// Keep the car's progress along the tangent; only remove the
-				// sideways overshoot. Snapping to the sample centre would pin
-				// the car at the rail forever.
-				const along =
-					(this.pos.x - near.sample.pos.x) * near.sample.tangent.x +
-					(this.pos.z - near.sample.pos.z) * near.sample.tangent.z;
-				this.pos.x =
-					near.sample.pos.x +
-					near.sample.tangent.x * along +
-					near.sample.normal.x * this.track.maxLateral * sign;
-				this.pos.z =
-					near.sample.pos.z +
-					near.sample.tangent.z * along +
-					near.sample.normal.z * this.track.maxLateral * sign;
-				// Slide along the rail instead of pinning the car into it.
-				this.heading += shortestAngle(tangentHeading - this.heading) * 0.9;
-				this.touchingRail = true;
-			} else {
-				this.touchingRail = false;
-			}
-
-			const after = this.track.nearestSample(this.pos, near.index);
-
-			if (this.touchingRail) this.wallContactTime += dt;
-			else this.wallContactTime = Math.max(0, this.wallContactTime - dt * 2);
-
-			if (this.assist && !this.autoSteering && this.wallContactTime >= 2) {
-				this.autoSteering = true;
-				this.autoSteerTime = 0;
-				this.wallContactTime = 0;
-			}
-
-			if (this.autoSteering) {
-				this.autoSteerTime += dt;
-				const lateral = this.track.nearestSample(this.pos, after.index).lateral;
-				// Take the wheel, align with the road and drift back to the
-				// centre. The badge in the HUD tells the child it is helping.
-				this.heading +=
-					shortestAngle(tangentHeading - this.heading) * Math.min(1, dt * 4.2);
-				const pull = Math.min(1, dt * 2.6);
-				this.pos.x += after.sample.normal.x * -lateral * pull;
-				this.pos.z += after.sample.normal.z * -lateral * pull;
-				if ((Math.abs(lateral) < 0.55 && this.autoSteerTime > 0.8) || this.autoSteerTime > 4) {
-					this.autoSteering = false;
-					this.wallContactTime = 0;
-				}
-			}
-			const forwardXNow = Math.sin(this.heading);
-			const forwardZNow = Math.cos(this.heading);
-			const forwardDot =
-				forwardXNow * after.sample.tangent.x + forwardZNow * after.sample.tangent.z;
-
-			if (forwardDot < -0.2) this.wrongWayTime += dt;
-			else this.wrongWayTime = 0;
-			if (this.speed < 0.4) this.stuckTime += dt;
-			else this.stuckTime = 0;
-			this.safeTimer += dt;
-			if (this.safeTimer > 1 && Math.abs(after.lateral) < this.track.maxLateral - 0.6 && forwardDot > 0.5) {
-				this.safePos.copy(this.pos);
-				this.safeHeading = this.heading;
-				this.safeTimer = 0;
-			}
-			if (this.wrongWayTime > 1.5 || this.stuckTime > 2) {
-				this.recover();
-				this.syncVisual(dt);
-				return {
-					near: this.track.nearestSample(this.pos, this.prevIndex),
-					boostStarted: false,
-					railContact: false,
-					autoSteer: this.autoSteering
-				};
-			}
-
-			let delta = after.sample.distance - before.sample.distance;
-			if (delta < -this.track.length / 2) delta += this.track.length;
-			if (delta > this.track.length / 2) delta -= this.track.length;
-			this.raceDistance = Math.min(this.track.length * LAPS, this.raceDistance + delta);
-			this.lap = Math.min(LAPS, Math.floor(this.raceDistance / this.track.length) + 1);
-
-			if (this.boostTime > 0) this.boostTime = Math.max(0, this.boostTime - dt);
-			if (this.raceDistance >= this.track.length * LAPS) this.finished = true;
-			this.prevIndex = after.index;
-			this.syncVisual(dt);
-		} else if (frozen) {
-			this.speed = Math.max(0, this.speed - ACCELERATION * 2 * dt);
-			this.syncVisual(dt);
+			this.drive(dt, steer, before, tangentHeading);
 		} else {
-			this.speed = Math.max(0, this.speed - ACCELERATION * 2 * dt);
-			this.pos.x += Math.sin(this.heading) * this.speed * dt;
-			this.pos.z += Math.cos(this.heading) * this.speed * dt;
-			this.syncVisual(dt);
+			this.coast(dt, frozen);
 		}
 
 		return {
 			near: this.track.nearestSample(this.pos, this.prevIndex),
-			boostStarted: false,
-			railContact: this.touchingRail,
-			autoSteer: this.autoSteering
+			railContact: this.touchingRail
 		};
+	}
+
+	/** One physics step while the race is live: speed, steering, rails, help. */
+	private drive(dt: number, steer: number, before: NearestResult, tangentHeading: number): void {
+		this.updateSpeed(dt, steer, this.touchingRail);
+		this.steerAndMove(dt, steer, tangentHeading);
+
+		const near = this.track.nearestSample(this.pos, before.index);
+		this.applyGuardrail(near, tangentHeading);
+
+		const after = this.track.nearestSample(this.pos, near.index);
+		this.updateAutoSteer(dt, after, tangentHeading);
+		if (this.updateRecovery(dt, after)) {
+			this.syncVisual(dt);
+			return;
+		}
+
+		this.advanceProgress(before, after, dt);
+		this.syncVisual(dt);
+	}
+
+	private updateSpeed(dt: number, steer: number, railContact: boolean): void {
+		const advanced = !this.assist;
+		if (advanced && !railContact && Math.abs(steer) < STRAIGHT_STEER) {
+			// Long, clean straights let the advanced car creep past 50 km/h.
+			this.straightTime = Math.min(ADVANCED_RAMP_SECONDS, this.straightTime + dt);
+		} else {
+			this.straightTime = 0;
+		}
+		// Walls bite harder in advanced: the car has to earn its speed back.
+		const targetSpeed = targetSpeedFor(
+			advanced,
+			this.straightTime,
+			this.boostTime > 0,
+			railContact
+		);
+		const maxDelta = ACCELERATION * dt;
+		const brakeDelta = ACCELERATION * BRAKE_MULTIPLIER * dt;
+		if (this.speed < targetSpeed) {
+			this.speed = Math.min(targetSpeed, this.speed + maxDelta);
+		} else {
+			this.speed = Math.max(targetSpeed, this.speed - brakeDelta);
+		}
+	}
+
+	private steerAndMove(dt: number, steer: number, tangentHeading: number): void {
+		const speedFactor = THREE.MathUtils.clamp(this.speed / CRUISE_SPEED, 0, 1);
+		const steerRate = THREE.MathUtils.lerp(STEER_LOW, STEER_HIGH, speedFactor);
+		// Screen-right is world -X when the camera looks along +Z; flip the
+		// heading sign so the on-screen arrows match the car's direction.
+		this.heading -= steer * steerRate * dt;
+		this.steerVisual += (steer - this.steerVisual) * Math.min(1, dt * 10);
+
+		// No permanent auto-follow. The car only follows the tangent a tiny
+		// amount; the real auto-steer assist is earned by hitting a rail.
+		this.heading += shortestAngle(tangentHeading - this.heading) * Math.min(1, TANGENT_FOLLOW * dt);
+
+		this.pos.x += Math.sin(this.heading) * this.speed * dt;
+		this.pos.z += Math.cos(this.heading) * this.speed * dt;
+	}
+
+	private applyGuardrail(near: NearestResult, tangentHeading: number): void {
+		if (Math.abs(near.lateral) <= this.track.maxLateral) {
+			this.touchingRail = false;
+			return;
+		}
+		const sign = Math.sign(near.lateral) || 1;
+		// Keep the car's progress along the tangent; only remove the sideways
+		// overshoot. Snapping to the sample centre would pin the car at the rail
+		// forever.
+		const along =
+			(this.pos.x - near.sample.pos.x) * near.sample.tangent.x +
+			(this.pos.z - near.sample.pos.z) * near.sample.tangent.z;
+		this.pos.x =
+			near.sample.pos.x +
+			near.sample.tangent.x * along +
+			near.sample.normal.x * this.track.maxLateral * sign;
+		this.pos.z =
+			near.sample.pos.z +
+			near.sample.tangent.z * along +
+			near.sample.normal.z * this.track.maxLateral * sign;
+		// Slide along the rail instead of pinning the car into it.
+		this.heading += shortestAngle(tangentHeading - this.heading) * RAIL_SLIDE_ALIGN;
+		this.touchingRail = true;
+	}
+
+	private updateAutoSteer(dt: number, after: NearestResult, tangentHeading: number): void {
+		if (this.touchingRail) this.wallContactTime += dt;
+		else this.wallContactTime = Math.max(0, this.wallContactTime - dt * 2);
+
+		if (this.assist && !this.autoSteering && this.wallContactTime >= ASSIST_TRIGGER_SECONDS) {
+			this.autoSteering = true;
+			this.autoSteerTime = 0;
+			this.wallContactTime = 0;
+		}
+		if (!this.autoSteering) return;
+
+		this.autoSteerTime += dt;
+		const lateral = this.track.nearestSample(this.pos, after.index).lateral;
+		// Take the wheel, align with the road and drift back to the centre. The
+		// badge in the HUD tells the child it is helping.
+		this.heading +=
+			shortestAngle(tangentHeading - this.heading) * Math.min(1, dt * ASSIST_ALIGN_RATE);
+		const pull = Math.min(1, dt * ASSIST_PULL_RATE);
+		this.pos.x += after.sample.normal.x * -lateral * pull;
+		this.pos.z += after.sample.normal.z * -lateral * pull;
+		if (
+			(Math.abs(lateral) < ASSIST_CENTRE_LATERAL && this.autoSteerTime > ASSIST_MIN_SECONDS) ||
+			this.autoSteerTime > ASSIST_MAX_SECONDS
+		) {
+			this.autoSteering = false;
+			this.wallContactTime = 0;
+		}
+	}
+
+	/** Tracks wrong-way/stuck timers and the last safe spot. True if it recovered. */
+	private updateRecovery(dt: number, after: NearestResult): boolean {
+		const forwardDot =
+			Math.sin(this.heading) * after.sample.tangent.x +
+			Math.cos(this.heading) * after.sample.tangent.z;
+
+		if (forwardDot < WRONG_WAY_DOT) this.wrongWayTime += dt;
+		else this.wrongWayTime = 0;
+		if (this.speed < STUCK_SPEED) this.stuckTime += dt;
+		else this.stuckTime = 0;
+		this.safeTimer += dt;
+		if (
+			this.safeTimer > SAFE_SAMPLE_SECONDS &&
+			Math.abs(after.lateral) < this.track.maxLateral - SAFE_MARGIN &&
+			forwardDot > 0.5
+		) {
+			this.safePos.copy(this.pos);
+			this.safeHeading = this.heading;
+			this.safeTimer = 0;
+		}
+		if (this.wrongWayTime <= WRONG_WAY_SECONDS && this.stuckTime <= STUCK_SECONDS) return false;
+
+		this.recover();
+		return true;
+	}
+
+	private advanceProgress(before: NearestResult, after: NearestResult, dt: number): void {
+		let delta = after.sample.distance - before.sample.distance;
+		if (delta < -this.track.length / 2) delta += this.track.length;
+		if (delta > this.track.length / 2) delta -= this.track.length;
+		this.raceDistance = Math.min(this.track.length * LAPS, this.raceDistance + delta);
+		this.lap = Math.min(LAPS, Math.floor(this.raceDistance / this.track.length) + 1);
+
+		if (this.boostTime > 0) this.boostTime = Math.max(0, this.boostTime - dt);
+		if (this.raceDistance >= this.track.length * LAPS) this.finished = true;
+		this.prevIndex = after.index;
+	}
+
+	/** Braking only: during the countdown the car holds still, after the flag it rolls out. */
+	private coast(dt: number, frozen: boolean): void {
+		this.speed = Math.max(0, this.speed - ACCELERATION * COAST_BRAKE_MULTIPLIER * dt);
+		if (!frozen) {
+			this.pos.x += Math.sin(this.heading) * this.speed * dt;
+			this.pos.z += Math.cos(this.heading) * this.speed * dt;
+		}
+		this.syncVisual(dt);
 	}
 
 	recover(): void {

@@ -1,12 +1,30 @@
 import * as THREE from 'three';
-import { CAR_BY_ID, CARS, type CarId } from './cars';
+import { CAR_BY_ID, type CarId } from './cars';
 import { CRUISE_SPEED, createCarVisual, type PlayerCar } from './car';
+import { disposeObject3D } from './dispose';
 import type { Track } from './track';
 
 const RIVAL_IDS: CarId[] = ['bear', 'bunny', 'fox', 'cat'];
 const LANES = [-2.25, 0, 2.25];
 const SPEEDS = [0.94, 1.0, 1.06];
 const START_GAPS = [5, 10, 15];
+
+/** Rubber-band: how far ahead/behind the player starts changing rival speed. */
+const RUBBER_DISTANCE = 25;
+const RUBBER_UP = 1.08;
+const RUBBER_DOWN = 0.92;
+
+/** Side-step away from the player before contact. */
+const AVOID_RADIUS = 2.6;
+const AVOID_PUSH = 4.5;
+const AVOID_LIMIT = 1.1;
+const LANE_LIMIT = 2.55;
+const LANE_EASE = 3;
+
+/** Soft bump: push apart, no speed loss, then wait before pushing again. */
+const BUMP_RADIUS = 1.95;
+const BUMP_PUSH = 0.16;
+const BUMP_COOLDOWN = 0.6;
 
 export class Rival {
 	id: CarId;
@@ -43,6 +61,12 @@ export class Rival {
 		this.sync();
 	}
 
+	/** Releases this rival's own GPU buffers. Shared wheel resources survive. */
+	dispose(): void {
+		disposeObject3D(this.visual.group);
+		this.visual.group.removeFromParent();
+	}
+
 	sync(): void {
 		const s = this.track.sampleAtDistance(this.distance);
 		this.visual.group.position.set(
@@ -62,19 +86,18 @@ export class Rival {
 
 		const gap = this.distance - this.startDistance - player.raceDistance;
 		let rubber = 1;
-		if (gap > 25) rubber = 1.08;
-		else if (gap < -25) rubber = 0.92;
+		if (gap > RUBBER_DISTANCE) rubber = RUBBER_UP;
+		else if (gap < -RUBBER_DISTANCE) rubber = RUBBER_DOWN;
 
-		if (nearPlayer < 2.6) {
+		if (nearPlayer < AVOID_RADIUS) {
 			const playerLane = dx * s.normal.x + dz * s.normal.z;
 			const away = Math.sign(this.lane - playerLane) || 1;
-			this.avoid += away * dt * 4.5;
+			this.avoid += away * dt * AVOID_PUSH;
 		}
-		this.avoid = THREE.MathUtils.clamp(this.avoid, -1.1, 1.1);
-		this.lane = THREE.MathUtils.clamp(this.baseLane + this.avoid, -2.55, 2.55);
+		this.avoid = THREE.MathUtils.clamp(this.avoid, -AVOID_LIMIT, AVOID_LIMIT);
 
-		const targetLane = this.baseLane + this.avoid;
-		this.lane += (targetLane - this.lane) * Math.min(1, dt * 3);
+		const targetLane = THREE.MathUtils.clamp(this.baseLane + this.avoid, -LANE_LIMIT, LANE_LIMIT);
+		this.lane += (targetLane - this.lane) * Math.min(1, dt * LANE_EASE);
 
 		this.distance += CRUISE_SPEED * this.speedMul * rubber * dt;
 
@@ -87,13 +110,14 @@ export class Rival {
 		const dx = player.pos.x - this.visual.group.position.x;
 		const dz = player.pos.z - this.visual.group.position.z;
 		const distance = Math.sqrt(dx * dx + dz * dz);
-		if (distance > 1.95) return false;
+		if (distance > BUMP_RADIUS) return false;
 		const length = Math.max(0.001, distance);
-		player.pos.x += (dx / length) * 0.16;
-		player.pos.z += (dz / length) * 0.16;
+		// The push goes through the car so the guardrail still applies: a bump
+		// can never shove the player off the road.
+		player.nudge((dx / length) * BUMP_PUSH, (dz / length) * BUMP_PUSH);
 		this.lane += Math.sign(this.baseLane - this.lane || 1) * 0.18;
-		this.avoid = THREE.MathUtils.clamp(this.avoid + 0.2, -1.1, 1.1);
-		this.cooldown = 0.6;
+		this.avoid = THREE.MathUtils.clamp(this.avoid + 0.2, -AVOID_LIMIT, AVOID_LIMIT);
+		this.cooldown = BUMP_COOLDOWN;
 		return true;
 	}
 }
@@ -101,8 +125,4 @@ export class Rival {
 export function createRivals(playerCarId: CarId, track: Track): Rival[] {
 	const ids = RIVAL_IDS.filter((id) => id !== playerCarId).slice(0, 3);
 	return ids.map((id, index) => new Rival(id, index, track));
-}
-
-export function allRivalIds(): CarId[] {
-	return [...CARS.map((car) => car.id)];
 }

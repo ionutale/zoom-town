@@ -80,7 +80,3 @@ export const AVATARS: readonly { id: AvatarId; color: string; label: string }[] 
 export function carsForStars(stars: number): CarId[] {
 	return CARS.filter((car) => stars >= car.unlockedAt).map((car) => car.id);
 }
-
-export function isCarUnlocked(car: CarSpec, stars: number): boolean {
-	return stars >= car.unlockedAt;
-}

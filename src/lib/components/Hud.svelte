@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { HudState } from '#lib/game/game';
+	import type { Lang } from '#lib/save';
+	import { messages } from '#lib/i18n';
 	import Speedometer from './Speedometer.svelte';
 
 	let {
 		hud,
+		lang = 'it',
 		advanced = false,
 		inactive = false,
 		onSteer,
@@ -11,12 +14,15 @@
 		onPause
 	}: {
 		hud: HudState;
+		lang?: Lang;
 		advanced?: boolean;
 		inactive?: boolean;
 		onSteer: (value: number) => void;
 		onBoost: () => void;
 		onPause: () => void;
 	} = $props();
+
+	const t = $derived(messages(lang));
 
 	let leftDown = $state(false);
 	let rightDown = $state(false);
@@ -120,7 +126,7 @@
 
 <div class="hud" class:boost={hud.boostTime > 0} inert={inactive} aria-hidden={inactive}>
 	<div class="top">
-		<div class="balloon-count" aria-label={`${hud.balloons} balloons`}>
+		<div class="balloon-count" aria-label={t.balloons(hud.balloons)}>
 			<svg viewBox="0 0 24 30" width="24" height="30" aria-hidden="true">
 				<ellipse cx="12" cy="12" rx="9" ry="11" fill="#E8433F" stroke="#26313C" stroke-width="2" />
 				<path d="M10 23 L12 27 L14 23" fill="#FFF6E3" stroke="#26313C" stroke-width="1.5" />
@@ -132,13 +138,13 @@
 			</div>
 		</div>
 
-		<div class="laps" aria-label={`Lap ${hud.lap} of ${hud.laps}`}>
+		<div class="laps" aria-label={t.lap(hud.lap, hud.laps)}>
 			{#each Array.from({ length: hud.laps }, (_, i) => i) as lap}
 				<span class="pip" class:on={hud.lap - 1 > lap}></span>
 			{/each}
 		</div>
 
-		<button class="pause" onclick={onPause} aria-label="Pause">
+		<button class="pause" onclick={onPause} aria-label={t.pause}>
 			<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
 				<rect x="5" y="4" width="5" height="16" rx="2" fill="#26313C" />
 				<rect x="14" y="4" width="5" height="16" rx="2" fill="#26313C" />
@@ -146,14 +152,20 @@
 		</button>
 	</div>
 
-	<Speedometer speed={hud.speedKmh} boosting={hud.boostTime > 0} />
+	<Speedometer speed={hud.speedKmh} boosting={hud.boostTime > 0} {lang} />
 
 	{#if hud.autoSteer}
-		<div class="auto-steer" aria-label="Auto steering" aria-live="polite">
+		<div class="auto-steer" aria-label={t.autoSteering} aria-live="polite">
 			<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
 				<circle cx="20" cy="20" r="13" fill="none" stroke="#26313C" stroke-width="3.2" />
 				<circle cx="20" cy="20" r="4" fill="#26313C" />
-				<path d="M20 24 V32 M8 17 H16 M24 17 H32" fill="none" stroke="#26313C" stroke-width="3.2" stroke-linecap="round" />
+				<path
+					d="M20 24 V32 M8 17 H16 M24 17 H32"
+					fill="none"
+					stroke="#26313C"
+					stroke-width="3.2"
+					stroke-linecap="round"
+				/>
 			</svg>
 			<span>AUTO</span>
 		</div>
@@ -185,7 +197,7 @@
 				class="drag-surface"
 				class:active={dragPointer !== null}
 				role="slider"
-				aria-label="Drag left or right to steer"
+				aria-label={t.dragToSteer}
 				aria-orientation="horizontal"
 				aria-valuemin={-1}
 				aria-valuemax={1}
@@ -193,8 +205,7 @@
 				tabindex="0"
 				onkeydown={(e) =>
 					e.key === 'ArrowLeft' ? dragKey(e, -1) : e.key === 'ArrowRight' ? dragKey(e, 1) : null}
-				onkeyup={(e) =>
-					e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? dragKey(e, null) : null}
+				onkeyup={(e) => (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ? dragKey(e, null) : null)}
 				onpointerdown={dragStart}
 				onpointermove={dragMove}
 				onpointerup={dragEnd}
@@ -204,31 +215,31 @@
 		{/if}
 
 		{#if !advanced}
-		<button
-			class="steer left"
-			class:down={leftDown}
-			onpointerdown={(e) => steerPress(-1, e)}
-			onpointerup={steerRelease}
-			onpointercancel={steerRelease}
-			onpointerleave={steerRelease}
-			onlostpointercapture={steerRelease}
-			aria-label="Steer left"
-		>
-			<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
-				<path
-					d="M30 10 L14 24 L30 38"
-					fill="none"
-					stroke="#26313C"
-					stroke-width="7"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/>
-			</svg>
-		</button>
+			<button
+				class="steer left"
+				class:down={leftDown}
+				onpointerdown={(e) => steerPress(-1, e)}
+				onpointerup={steerRelease}
+				onpointercancel={steerRelease}
+				onpointerleave={steerRelease}
+				onlostpointercapture={steerRelease}
+				aria-label={t.steerLeft}
+			>
+				<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+					<path
+						d="M30 10 L14 24 L30 38"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="7"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</button>
 		{/if}
 
 		<div class="boost-wrap">
-			<div class="meter" aria-label={`${hud.charges} boosts`}>
+			<div class="meter" aria-label={t.boostCharges(hud.charges)}>
 				{#each Array.from({ length: hud.maxCharges }, (_, i) => i) as slot}
 					<span class="charge" class:on={slot < hud.charges}></span>
 				{/each}
@@ -238,7 +249,7 @@
 				class:ready={hud.charges > 0}
 				class:boosting={hud.boostTime > 0}
 				onpointerdown={boostPress}
-				aria-label="Boost"
+				aria-label={t.boost}
 			>
 				<svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true">
 					<path d="M26 5 L12 27 H23 L21 43 L36 20 H25 Z" fill="#26313C" />
@@ -247,27 +258,27 @@
 		</div>
 
 		{#if !advanced}
-		<button
-			class="steer right"
-			class:down={rightDown}
-			onpointerdown={(e) => steerPress(1, e)}
-			onpointerup={steerRelease}
-			onpointercancel={steerRelease}
-			onpointerleave={steerRelease}
-			onlostpointercapture={steerRelease}
-			aria-label="Steer right"
-		>
-			<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
-				<path
-					d="M18 10 L34 24 L18 38"
-					fill="none"
-					stroke="#26313C"
-					stroke-width="7"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/>
-			</svg>
-		</button>
+			<button
+				class="steer right"
+				class:down={rightDown}
+				onpointerdown={(e) => steerPress(1, e)}
+				onpointerup={steerRelease}
+				onpointercancel={steerRelease}
+				onpointerleave={steerRelease}
+				onlostpointercapture={steerRelease}
+				aria-label={t.steerRight}
+			>
+				<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+					<path
+						d="M18 10 L34 24 L18 38"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="7"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</button>
 		{/if}
 
 		{#if advanced}
@@ -322,6 +333,9 @@
 		top: calc(10px + var(--zt-safe-top));
 		left: calc(12px + var(--zt-safe-left));
 		right: calc(12px + var(--zt-safe-right));
+		/* Above the full-screen drag surface, or the pause button is unusable
+		   in Advanced driving. */
+		z-index: 2;
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
@@ -489,6 +503,7 @@
 	.bottom {
 		position: absolute;
 		inset: 0;
+		z-index: 1;
 	}
 
 	.steer,
@@ -657,50 +672,7 @@
 			width: 76px;
 			height: 76px;
 		}
-		.drag-surface {
-		position: absolute;
-		inset: 0;
-		pointer-events: auto;
-		touch-action: none;
-	}
-
-	.drag-hint {
-		position: absolute;
-		bottom: calc(16px + var(--zt-safe-bottom));
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 14px;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--zt-cream) 78%, transparent);
-		box-shadow: 0 3px 0 var(--zt-shadow);
-		pointer-events: none;
-	}
-
-	.drag-track {
-		position: relative;
-		width: 96px;
-		height: 26px;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--zt-ink) 14%, transparent);
-	}
-
-	.drag-knob {
-		position: absolute;
-		top: 3px;
-		left: 50%;
-		width: 32px;
-		height: 20px;
-		margin-left: -16px;
-		border-radius: 999px;
-		background: var(--zt-teal);
-		box-shadow: inset 0 0 0 2px var(--zt-ink);
-		transition: transform 60ms linear;
-	}
-
-	.boost-wrap {
+		.boost-wrap {
 			bottom: calc(94px + var(--zt-safe-bottom));
 		}
 		.boost-button {

@@ -20,14 +20,3 @@ export const COLORS = {
 	wood: 0xb9773f,
 	white: 0xffffff
 } as const;
-
-export const CAR_COLORS: Record<string, number> = {
-	bear: COLORS.blue,
-	bunny: COLORS.pink,
-	fox: COLORS.orange,
-	cat: COLORS.teal
-};
-
-export function cssColor(hex: number): string {
-	return `#${hex.toString(16).padStart(6, '0')}`;
-}

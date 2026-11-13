@@ -275,10 +275,7 @@ export class Track {
 
 	pointAt(t: number, lateral = 0, forward = 0): THREE.Vector3 {
 		const s = this.sampleAt(t);
-		return s.pos
-			.clone()
-			.addScaledVector(s.normal, lateral)
-			.addScaledVector(s.tangent, forward);
+		return s.pos.clone().addScaledVector(s.normal, lateral).addScaledVector(s.tangent, forward);
 	}
 
 	nearestSample(point: THREE.Vector3, hintIndex?: number): NearestResult {
@@ -299,13 +296,29 @@ export class Track {
 		}
 		const sample = this.samples[best];
 		const lateral =
-			(point.x - sample.pos.x) * sample.normal.x +
-			(point.z - sample.pos.z) * sample.normal.z;
+			(point.x - sample.pos.x) * sample.normal.x + (point.z - sample.pos.z) * sample.normal.z;
 		return { index: best, sample, lateral, centerDistance: Math.sqrt(bestDist) };
 	}
 
 	distanceFromTrack(point: THREE.Vector3): number {
 		return this.nearestSample(point).centerDistance;
+	}
+
+	/**
+	 * True when `point` is farther than `threshold` from the centreline.
+	 *
+	 * Scenery placement asks this thousands of times per circuit. Bailing out as
+	 * soon as one sample is close enough avoids the full 720-sample scan for the
+	 * candidates that are rejected, without changing the answer.
+	 */
+	isFartherThan(point: THREE.Vector3, threshold: number): boolean {
+		const limit = threshold * threshold;
+		for (const sample of this.samples) {
+			const dx = point.x - sample.pos.x;
+			const dz = point.z - sample.pos.z;
+			if (dx * dx + dz * dz <= limit) return false;
+		}
+		return true;
 	}
 
 	private interpolate(u: number, rawDistance: number): TrackSample {
@@ -393,12 +406,8 @@ export function buildTrackGroup(track: Track): THREE.Group {
 	group.name = 'track';
 
 	group.add(ribbonMesh(track, 0, track.width, track.theme.road, 0));
-	group.add(
-		ribbonMesh(track, track.halfWidth - 0.28, 0.18, COLORS.cream, 0.025, false)
-	);
-	group.add(
-		ribbonMesh(track, -track.halfWidth + 0.28, 0.18, COLORS.cream, 0.025, false)
-	);
+	group.add(ribbonMesh(track, track.halfWidth - 0.28, 0.18, COLORS.cream, 0.025, false));
+	group.add(ribbonMesh(track, -track.halfWidth + 0.28, 0.18, COLORS.cream, 0.025, false));
 
 	const dashGeometry = new THREE.BoxGeometry(0.12, 0.02, 1.15);
 	const dashMaterial = new THREE.MeshBasicMaterial({ color: COLORS.cream });
@@ -491,10 +500,7 @@ function buildGantry(track: Track): THREE.Group {
 		stripe.position.set(side * (track.halfWidth + 0.6), 3.5, 0);
 		parts.push(stripe);
 	}
-	const beam = new THREE.Mesh(
-		new THREE.BoxGeometry(track.width + 2.6, 0.72, 0.7),
-		postMaterial
-	);
+	const beam = new THREE.Mesh(new THREE.BoxGeometry(track.width + 2.6, 0.72, 0.7), postMaterial);
 	beam.position.y = 5.55;
 	parts.push(beam);
 	const stripe = new THREE.Mesh(
@@ -527,8 +533,10 @@ function seeded(seed: number): () => number {
 	};
 }
 
+const sceneryPoint = new THREE.Vector3();
+
 function outsideTrack(track: Track, x: number, z: number, clearance = 5): boolean {
-	return track.distanceFromTrack(new THREE.Vector3(x, 0, z)) > track.halfWidth + clearance;
+	return track.isFartherThan(sceneryPoint.set(x, 0, z), track.halfWidth + clearance);
 }
 
 export function buildSceneryGroup(track: Track): THREE.Group {
@@ -561,31 +569,39 @@ export function buildSceneryGroup(track: Track): THREE.Group {
 	group.add(buildClouds(track));
 	group.add(buildFlowers(track, theme, rand));
 	group.add(buildDecorations(track, theme, rand, nearStart));
-
-	switch (theme.accent) {
-		case COLORS.teal:
-			group.add(buildPond(track, theme));
-			group.add(buildBandstand(track, theme));
-			break;
-		case COLORS.water:
-			group.add(buildHarbor(track, theme));
-			break;
-		case COLORS.orange:
-			group.add(buildDinoValley(track, theme));
-			break;
-		case COLORS.pink:
-			group.add(buildCandyGrove(track, theme));
-			break;
-		default:
-			group.add(buildFountain(track.pointAt(0.28, 15)));
-			group.add(buildToyShop(track.pointAt(0.08, -22)));
-			break;
-	}
+	group.add(buildLandmarks(track, theme));
 
 	if (track.def.id === 'sunny-town' || track.def.id === 'park-loop') {
 		group.add(buildBridge(track, 0.54, 0.61));
 	}
 
+	return group;
+}
+
+/**
+ * The signature landmark set for a world. Dispatch is on the theme id, not on a
+ * palette colour: two themes are free to share an accent without swapping
+ * landmarks by accident.
+ */
+function buildLandmarks(track: Track, theme: TrackTheme): THREE.Group {
+	const group = new THREE.Group();
+	switch (track.def.theme) {
+		case 'park':
+			group.add(buildPond(track, theme), buildBandstand(track, theme));
+			break;
+		case 'harbor':
+			group.add(buildHarbor(track, theme));
+			break;
+		case 'dino':
+			group.add(buildDinoValley(track, theme));
+			break;
+		case 'candy':
+			group.add(buildCandyGrove(track, theme));
+			break;
+		default:
+			group.add(buildFountain(track.pointAt(0.28, 15)), buildToyShop(track.pointAt(0.08, -22)));
+			break;
+	}
 	return group;
 }
 
@@ -776,11 +792,7 @@ function buildFlags(track: Track, theme: TrackTheme): THREE.Group {
 	return group;
 }
 
-function buildRocks(
-	track: Track,
-	theme: TrackTheme,
-	rand: () => number
-): THREE.Group {
+function buildRocks(track: Track, theme: TrackTheme, rand: () => number): THREE.Group {
 	const group = new THREE.Group();
 	const positions: [number, number][] = [];
 	for (let i = 0; i < 50 && positions.length < 22; i++) {
@@ -1156,10 +1168,7 @@ function buildDinoValley(track: Track, theme: TrackTheme): THREE.Group {
 	const boneSpot = track.pointAt(0.035, -14);
 	const boneMaterial = new THREE.MeshLambertMaterial({ color: COLORS.cream });
 	for (const side of [-1, 1]) {
-		const bone = new THREE.Mesh(
-			new THREE.CylinderGeometry(0.22, 0.22, 4.2, 6),
-			boneMaterial
-		);
+		const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 4.2, 6), boneMaterial);
 		bone.position.set(boneSpot.x + side * 1.8, 2.1, boneSpot.z);
 		group.add(bone);
 		for (const end of [-1, 1]) {
@@ -1168,10 +1177,7 @@ function buildDinoValley(track: Track, theme: TrackTheme): THREE.Group {
 			group.add(knob);
 		}
 	}
-	const boneTop = new THREE.Mesh(
-		new THREE.CylinderGeometry(0.2, 0.2, 4.2, 6),
-		boneMaterial
-	);
+	const boneTop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4.2, 6), boneMaterial);
 	boneTop.rotation.z = Math.PI / 2;
 	boneTop.position.set(boneSpot.x, 4.1, boneSpot.z);
 	group.add(boneTop);
