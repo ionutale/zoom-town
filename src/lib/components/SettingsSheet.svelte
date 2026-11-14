@@ -84,241 +84,248 @@
 			</svg>
 		</button>
 
-		<div class="row">
-			<span class="icon">
-				{#if settings.sound}
-					<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-						<path d="M8 16 H14 L21 10 V30 L14 24 H8 Z" fill="#26313C" />
-						<path
-							d="M26 15a7 7 0 0 1 0 10M30 11a12 12 0 0 1 0 18"
-							fill="none"
-							stroke="#26313C"
-							stroke-width="3.4"
-							stroke-linecap="round"
-						/>
-					</svg>
-				{:else}
-					<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-						<path d="M8 16 H14 L21 10 V30 L14 24 H8 Z" fill="#26313C" />
-						<path
-							d="M26 15 L34 25 M34 15 L26 25"
-							fill="none"
-							stroke="#26313C"
-							stroke-width="3.4"
-							stroke-linecap="round"
-						/>
-					</svg>
-				{/if}
-			</span>
-			<span class="label">{t.sound}</span>
-			<button class="switch" class:on={settings.sound} onclick={onSound} aria-label={t.toggleSound}>
-				<span></span>
-			</button>
-		</div>
-
-		<div class="row">
-			<span class="icon">
-				<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
-					<circle cx="13" cy="29" r="4.2" fill="#26313C" />
-					<circle cx="27" cy="26" r="4.2" fill="#26313C" />
-					<path
-						d="M17 29 V12 L31 9 V26"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3.4"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-				</svg>
-			</span>
-			<span class="label">{t.music}</span>
-			<input
-				class="bar"
-				type="range"
-				min="0"
-				max="100"
-				step="5"
-				value={percent(settings.musicVolume)}
-				style={`--fill:${percent(settings.musicVolume)}%`}
-				aria-label={t.music}
-				oninput={(event) => onMusic(Number(event.currentTarget.value) / 100)}
-			/>
-		</div>
-
-		<div class="row">
-			<span class="icon">
-				<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
-					<rect x="8" y="18" width="5" height="13" rx="2.5" fill="#26313C" />
-					<rect x="17.5" y="9" width="5" height="22" rx="2.5" fill="#26313C" />
-					<rect x="27" y="14" width="5" height="17" rx="2.5" fill="#26313C" />
-				</svg>
-			</span>
-			<span class="label">{t.effects}</span>
-			<input
-				class="bar"
-				type="range"
-				min="0"
-				max="100"
-				step="5"
-				value={percent(settings.effectsVolume)}
-				style={`--fill:${percent(settings.effectsVolume)}%`}
-				aria-label={t.effects}
-				oninput={(event) => onEffects(Number(event.currentTarget.value) / 100)}
-			/>
-		</div>
-
-		<div class="row">
-			<span class="icon lang">
-				<strong>IT</strong>
-				<strong>EN</strong>
-			</span>
-			<span class="label">{t.language}</span>
-			<div class="pills">
-				<button class="pill" class:on={settings.lang === 'it'} onclick={() => onLang('it')}
-					>IT</button
+		<div class="body">
+			<div class="row">
+				<span class="icon">
+					{#if settings.sound}
+						<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+							<path d="M8 16 H14 L21 10 V30 L14 24 H8 Z" fill="#26313C" />
+							<path
+								d="M26 15a7 7 0 0 1 0 10M30 11a12 12 0 0 1 0 18"
+								fill="none"
+								stroke="#26313C"
+								stroke-width="3.4"
+								stroke-linecap="round"
+							/>
+						</svg>
+					{:else}
+						<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+							<path d="M8 16 H14 L21 10 V30 L14 24 H8 Z" fill="#26313C" />
+							<path
+								d="M26 15 L34 25 M34 15 L26 25"
+								fill="none"
+								stroke="#26313C"
+								stroke-width="3.4"
+								stroke-linecap="round"
+							/>
+						</svg>
+					{/if}
+				</span>
+				<span class="label">{t.sound}</span>
+				<button
+					class="switch"
+					class:on={settings.sound}
+					onclick={onSound}
+					aria-label={t.toggleSound}
 				>
-				<button class="pill" class:on={settings.lang === 'en'} onclick={() => onLang('en')}
-					>EN</button
-				>
+					<span></span>
+				</button>
 			</div>
-		</div>
 
-		<div class="row">
-			<span class="icon">
-				<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-					<path
-						d="M5 20 Q12 10 20 20 T35 20"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3.6"
-						stroke-linecap="round"
-					/>
-					<path
-						d="M5 28 Q12 18 20 28 T35 28"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3.6"
-						stroke-linecap="round"
-						opacity="0.45"
-					/>
-				</svg>
-			</span>
-			<span class="label">{t.calm}</span>
-			<button
-				class="switch"
-				class:on={settings.reducedMotion}
-				onclick={onMotion}
-				aria-label={t.toggleMotion}
-			>
-				<span></span>
-			</button>
-		</div>
+			<div class="row">
+				<span class="icon">
+					<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+						<circle cx="13" cy="29" r="4.2" fill="#26313C" />
+						<circle cx="27" cy="26" r="4.2" fill="#26313C" />
+						<path
+							d="M17 29 V12 L31 9 V26"
+							fill="none"
+							stroke="#26313C"
+							stroke-width="3.4"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</span>
+				<span class="label">{t.music}</span>
+				<input
+					class="bar"
+					type="range"
+					min="0"
+					max="100"
+					step="5"
+					value={percent(settings.musicVolume)}
+					style={`--fill:${percent(settings.musicVolume)}%`}
+					aria-label={t.music}
+					oninput={(event) => onMusic(Number(event.currentTarget.value) / 100)}
+				/>
+			</div>
 
-		<div class="row">
-			<span class="icon">
-				<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-					<path
-						d="M11 21 V12a3 3 0 0 1 6 0v9"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3"
-						stroke-linecap="round"
-					/>
-					<path
-						d="M17 20v-7a3 3 0 0 1 6 0v8"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3"
-						stroke-linecap="round"
-					/>
-					<path
-						d="M23 21v-5a3 3 0 0 1 6 0v9c0 5-4 9-9 9h-2c-3 0-5-1.6-6.4-4L7 21.5a2.8 2.8 0 0 1 4.7-3L14 22"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3"
-						stroke-linejoin="round"
-					/>
-					<path
-						d="M5 9 H2 M30 9 H33"
-						fill="none"
-						stroke="#26313C"
-						stroke-width="3"
-						stroke-linecap="round"
-						opacity="0.45"
-					/>
-				</svg>
-			</span>
-			<span class="label">{t.advanced}</span>
-			<button
-				class="switch"
-				class:on={settings.advancedDriving}
-				onclick={onAdvanced}
-				aria-label={t.toggleAdvanced}
-			>
-				<span></span>
-			</button>
-		</div>
+			<div class="row">
+				<span class="icon">
+					<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+						<rect x="8" y="18" width="5" height="13" rx="2.5" fill="#26313C" />
+						<rect x="17.5" y="9" width="5" height="22" rx="2.5" fill="#26313C" />
+						<rect x="27" y="14" width="5" height="17" rx="2.5" fill="#26313C" />
+					</svg>
+				</span>
+				<span class="label">{t.effects}</span>
+				<input
+					class="bar"
+					type="range"
+					min="0"
+					max="100"
+					step="5"
+					value={percent(settings.effectsVolume)}
+					style={`--fill:${percent(settings.effectsVolume)}%`}
+					aria-label={t.effects}
+					oninput={(event) => onEffects(Number(event.currentTarget.value) / 100)}
+				/>
+			</div>
 
-		{#if showInstall && onInstall}
-			<button class="install-row" onclick={() => onInstall?.()}>
+			<div class="row">
+				<span class="icon lang">
+					<strong>IT</strong>
+					<strong>EN</strong>
+				</span>
+				<span class="label">{t.language}</span>
+				<div class="pills">
+					<button class="pill" class:on={settings.lang === 'it'} onclick={() => onLang('it')}
+						>IT</button
+					>
+					<button class="pill" class:on={settings.lang === 'en'} onclick={() => onLang('en')}
+						>EN</button
+					>
+				</div>
+			</div>
+
+			<div class="row">
 				<span class="icon">
 					<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
-						<rect
-							x="8"
-							y="4"
-							width="24"
-							height="32"
-							rx="6"
-							fill="#FFF6E3"
-							stroke="#26313C"
-							stroke-width="2.4"
-						/>
 						<path
-							d="M20 9 V19 M16 13 L20 9 L24 13"
+							d="M5 20 Q12 10 20 20 T35 20"
 							fill="none"
 							stroke="#26313C"
-							stroke-width="2.6"
+							stroke-width="3.6"
 							stroke-linecap="round"
-							stroke-linejoin="round"
 						/>
-						<path d="M14 26 H26" stroke="#7CC242" stroke-width="3" stroke-linecap="round" />
+						<path
+							d="M5 28 Q12 18 20 28 T35 28"
+							fill="none"
+							stroke="#26313C"
+							stroke-width="3.6"
+							stroke-linecap="round"
+							opacity="0.45"
+						/>
 					</svg>
 				</span>
-				<span class="label">{t.installApp}</span>
-				<span class="chevron" aria-hidden="true">›</span>
-			</button>
-		{/if}
+				<span class="label">{t.calm}</span>
+				<button
+					class="switch"
+					class:on={settings.reducedMotion}
+					onclick={onMotion}
+					aria-label={t.toggleMotion}
+				>
+					<span></span>
+				</button>
+			</div>
 
-		{#if hasProfile}
-			<button
-				class="reset"
-				onpointerdown={startHold}
-				onpointerup={stopHold}
-				onpointerleave={stopHold}
-				onpointercancel={stopHold}
-				aria-label={t.resetHold}
-			>
-				<span class="fill" style={`width:${hold * 100}%`}></span>
-				<span class="trash" aria-hidden="true">
-					<svg viewBox="0 0 32 32" width="26" height="26">
+			<div class="row">
+				<span class="icon">
+					<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
 						<path
-							d="M9 10 H23 L21 27 H11 Z"
+							d="M11 21 V12a3 3 0 0 1 6 0v9"
 							fill="none"
-							stroke="#FFF6E3"
-							stroke-width="3.2"
+							stroke="#26313C"
+							stroke-width="3"
+							stroke-linecap="round"
+						/>
+						<path
+							d="M17 20v-7a3 3 0 0 1 6 0v8"
+							fill="none"
+							stroke="#26313C"
+							stroke-width="3"
+							stroke-linecap="round"
+						/>
+						<path
+							d="M23 21v-5a3 3 0 0 1 6 0v9c0 5-4 9-9 9h-2c-3 0-5-1.6-6.4-4L7 21.5a2.8 2.8 0 0 1 4.7-3L14 22"
+							fill="none"
+							stroke="#26313C"
+							stroke-width="3"
 							stroke-linejoin="round"
 						/>
 						<path
-							d="M7 9 H25 M13 9 V6 H19 V9"
+							d="M5 9 H2 M30 9 H33"
 							fill="none"
-							stroke="#FFF6E3"
-							stroke-width="3.2"
+							stroke="#26313C"
+							stroke-width="3"
 							stroke-linecap="round"
+							opacity="0.45"
 						/>
 					</svg>
 				</span>
-			</button>
-		{/if}
+				<span class="label">{t.advanced}</span>
+				<button
+					class="switch"
+					class:on={settings.advancedDriving}
+					onclick={onAdvanced}
+					aria-label={t.toggleAdvanced}
+				>
+					<span></span>
+				</button>
+			</div>
+
+			{#if showInstall && onInstall}
+				<button class="install-row" onclick={() => onInstall?.()}>
+					<span class="icon">
+						<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+							<rect
+								x="8"
+								y="4"
+								width="24"
+								height="32"
+								rx="6"
+								fill="#FFF6E3"
+								stroke="#26313C"
+								stroke-width="2.4"
+							/>
+							<path
+								d="M20 9 V19 M16 13 L20 9 L24 13"
+								fill="none"
+								stroke="#26313C"
+								stroke-width="2.6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<path d="M14 26 H26" stroke="#7CC242" stroke-width="3" stroke-linecap="round" />
+						</svg>
+					</span>
+					<span class="label">{t.installApp}</span>
+					<span class="chevron" aria-hidden="true">›</span>
+				</button>
+			{/if}
+
+			{#if hasProfile}
+				<button
+					class="reset"
+					onpointerdown={startHold}
+					onpointerup={stopHold}
+					onpointerleave={stopHold}
+					onpointercancel={stopHold}
+					aria-label={t.resetHold}
+				>
+					<span class="fill" style={`width:${hold * 100}%`}></span>
+					<span class="trash" aria-hidden="true">
+						<svg viewBox="0 0 32 32" width="26" height="26">
+							<path
+								d="M9 10 H23 L21 27 H11 Z"
+								fill="none"
+								stroke="#FFF6E3"
+								stroke-width="3.2"
+								stroke-linejoin="round"
+							/>
+							<path
+								d="M7 9 H25 M13 9 V6 H19 V9"
+								fill="none"
+								stroke="#FFF6E3"
+								stroke-width="3.2"
+								stroke-linecap="round"
+							/>
+						</svg>
+					</span>
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
 
@@ -337,17 +344,25 @@
 		position: relative;
 		width: min(100%, 330px);
 		max-height: calc(100dvh - 32px);
-		overflow-y: auto;
-		overscroll-behavior: contain;
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
 		padding: 20px 16px 16px;
 		border-radius: 28px;
 		background: var(--zt-cream);
 		box-shadow:
 			0 9px 0 rgb(38 49 60 / 0.24),
 			inset 0 0 0 4px var(--zt-white);
+	}
+	/* Only the rows scroll. The close button overhangs the card, so the card
+	   itself must not clip its overflow. */
+	.body {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		touch-action: pan-y;
 	}
 	.close {
 		position: absolute;
