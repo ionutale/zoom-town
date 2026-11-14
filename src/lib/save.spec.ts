@@ -15,7 +15,9 @@ describe('save data', () => {
 			sound: true,
 			lang: 'it',
 			reducedMotion: false,
-			advancedDriving: false
+			advancedDriving: false,
+			musicVolume: 1,
+			effectsVolume: 1
 		});
 	});
 
@@ -118,6 +120,27 @@ describe('save data', () => {
 			// Cat is unlocked by the clamped 3 stars, so the pick is kept.
 			expect(profile?.selectedCar).toBe('cat');
 			expect(profile?.selectedTrack).toBe('sunny-town');
+		});
+
+		it('keeps the two level bars and clamps them to 0–1', () => {
+			store({ profiles: [], settings: { musicVolume: 0.35, effectsVolume: 4 } });
+			const save = loadSave();
+			expect(save.settings.musicVolume).toBeCloseTo(0.35, 5);
+			expect(save.settings.effectsVolume).toBe(1);
+
+			store({ profiles: [], settings: { musicVolume: -2, effectsVolume: 0 } });
+			expect(loadSave().settings.musicVolume).toBe(0);
+			expect(loadSave().settings.effectsVolume).toBe(0);
+		});
+
+		it('defaults missing or broken bars to full volume', () => {
+			store({ profiles: [], settings: {} });
+			expect(loadSave().settings.musicVolume).toBe(1);
+			expect(loadSave().settings.effectsVolume).toBe(1);
+
+			store({ profiles: [], settings: { musicVolume: 'loud', effectsVolume: null } });
+			expect(loadSave().settings.musicVolume).toBe(1);
+			expect(loadSave().settings.effectsVolume).toBe(1);
 		});
 	});
 });

@@ -42,6 +42,13 @@ const BASE = `${import.meta.env.BASE_URL ?? '/'}audio/`;
 
 const MUSIC_GAIN = 0.18;
 const MUSIC_DUCKED = 0.05;
+const SFX_GAIN = 0.6;
+const VOICE_GAIN = 1;
+
+function clamp01(value: number): number {
+	if (!Number.isFinite(value)) return 1;
+	return Math.min(1, Math.max(0, value));
+}
 
 function pathFor(key: string): string {
 	return `${BASE}${key}`;
@@ -63,9 +70,14 @@ export class AudioEngine {
 	private decoding: Promise<void> | null = null;
 	private wantsMusic = false;
 	private wantsEngine = false;
+	/** Base engine level (before the effects bar) from the last update. */
+	private engineLevel = 0;
 	ready = false;
 	soundOn = true;
 	lang: Lang = 'it';
+	/** User level bars, 0–1. `sound` remains the master mute. */
+	musicVolume = 1;
+	effectsVolume = 1;
 
 	constructor(lang: Lang = 'it') {
 		this.lang = lang;
@@ -117,15 +129,15 @@ export class AudioEngine {
 			this.master.connect(this.ctx.destination);
 
 			this.musicGain = this.ctx.createGain();
-			this.musicGain.gain.value = 0.18;
+			this.musicGain.gain.value = MUSIC_GAIN * this.musicVolume;
 			this.musicGain.connect(this.master);
 
 			this.sfxGain = this.ctx.createGain();
-			this.sfxGain.gain.value = 0.6;
+			this.sfxGain.gain.value = SFX_GAIN * this.effectsVolume;
 			this.sfxGain.connect(this.master);
 
 			this.voiceGain = this.ctx.createGain();
-			this.voiceGain.gain.value = 1;
+			this.voiceGain.gain.value = VOICE_GAIN * this.effectsVolume;
 			this.voiceGain.connect(this.master);
 
 			this.engineGain = this.ctx.createGain();
@@ -180,6 +192,35 @@ export class AudioEngine {
 		}
 	}
 
+	private get musicTarget(): number {
+		return MUSIC_GAIN * this.musicVolume;
+	}
+
+	private get musicDuckedTarget(): number {
+		return MUSIC_DUCKED * this.musicVolume;
+	}
+
+	/** Music bar, 0–1. Applies live, including under a ducked voice line. */
+	setMusicVolume(value: number): void {
+		this.musicVolume = clamp01(value);
+		if (!this.ctx || !this.musicGain) return;
+		const target = this.voiceSource ? this.musicDuckedTarget : this.musicTarget;
+		this.musicGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.06);
+	}
+
+	/** Effects bar, 0–1: one-shots, the engine loop and voice lines. */
+	setEffectsVolume(value: number): void {
+		this.effectsVolume = clamp01(value);
+		if (!this.ctx) return;
+		const now = this.ctx.currentTime;
+		this.sfxGain?.gain.setTargetAtTime(SFX_GAIN * this.effectsVolume, now, 0.06);
+		this.voiceGain?.gain.setTargetAtTime(VOICE_GAIN * this.effectsVolume, now, 0.06);
+		if (this.engineGain && this.engineSource) {
+			const target = this.soundOn ? this.engineLevel * this.effectsVolume : 0;
+			this.engineGain.gain.setTargetAtTime(target, now, 0.06);
+		}
+	}
+
 	private buffer(key: string): AudioBuffer | null {
 		return this.buffers.get(key) ?? null;
 	}
@@ -213,12 +254,12 @@ export class AudioEngine {
 		source.onended = () => {
 			if (this.voiceSource === source) this.voiceSource = null;
 			if (this.musicGain && this.ctx) {
-				this.musicGain.gain.setTargetAtTime(MUSIC_GAIN, this.ctx.currentTime, 0.12);
+				this.musicGain.gain.setTargetAtTime(this.musicTarget, this.ctx.currentTime, 0.12);
 			}
 		};
 		this.voiceSource = source;
 		if (this.musicGain && this.ctx) {
-			this.musicGain.gain.setTargetAtTime(MUSIC_DUCKED, this.ctx.currentTime, 0.08);
+			this.musicGain.gain.setTargetAtTime(this.musicDuckedTarget, this.ctx.currentTime, 0.08);
 		}
 		source.start();
 	}
@@ -235,7 +276,7 @@ export class AudioEngine {
 		// stop() never fires onended, so an interrupted line would otherwise
 		// leave the music ducked for the rest of the session.
 		if (this.musicGain && this.ctx) {
-			this.musicGain.gain.setTargetAtTime(MUSIC_GAIN, this.ctx.currentTime, 0.12);
+			this.musicGain.gain.setTargetAtTime(this.musicTarget, this.ctx.currentTime, 0.12);
 		}
 	}
 
@@ -293,8 +334,9 @@ export class AudioEngine {
 	}
 
 	updateEngine(speedRatio: number, boosting: boolean): void {
+		this.engineLevel = 0.09 + speedRatio * 0.05 + (boosting ? 0.03 : 0);
 		if (!this.ctx || !this.engineGain || !this.engineSource) return;
-		const target = this.soundOn ? 0.09 + speedRatio * 0.05 + (boosting ? 0.03 : 0) : 0;
+		const target = this.soundOn ? this.engineLevel * this.effectsVolume : 0;
 		this.engineGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.05);
 		this.engineSource.playbackRate.setTargetAtTime(
 			0.78 + speedRatio * 0.55 + (boosting ? 0.18 : 0),

@@ -36,7 +36,9 @@ test.beforeEach(async ({ page }) => {
 						sound: save?.settings?.sound ?? true,
 						lang: language,
 						reducedMotion: save?.settings?.reducedMotion ?? false,
-						advancedDriving: save?.settings?.advancedDriving ?? false
+						advancedDriving: save?.settings?.advancedDriving ?? false,
+						musicVolume: save?.settings?.musicVolume ?? 1,
+						effectsVolume: save?.settings?.effectsVolume ?? 1
 					}
 				})
 			);
@@ -497,6 +499,42 @@ test('drives with the keyboard on a desktop', async ({ page }) => {
 	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeVisible();
 	await page.keyboard.press('p');
 	await expect(page.getByRole('dialog', { name: 'Paused' })).toBeHidden();
+});
+
+test('keeps separate music and effects level bars', async ({ page }) => {
+	await page.goto('/?debug=1');
+	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+	await page.getByRole('button', { name: 'Settings' }).click();
+
+	const music = page.getByRole('slider', { name: 'Music' });
+	const effects = page.getByRole('slider', { name: 'Effects' });
+	await expect(music).toHaveValue('100');
+	await expect(effects).toHaveValue('100');
+
+	await music.focus();
+	await page.keyboard.press('Home');
+	await expect
+		.poll(
+			async () =>
+				(await page.evaluate(() => (window as any).__zoomtown.save())).settings.musicVolume,
+			{
+				timeout: 3000
+			}
+		)
+		.toBe(0);
+
+	// The bars are independent.
+	await expect(effects).toHaveValue('100');
+	expect(
+		(await page.evaluate(() => (window as any).__zoomtown.save())).settings.effectsVolume
+	).toBe(1);
+
+	// The level survives a reload, and the dialog still closes on a short screen.
+	await page.reload();
+	await expect(page.getByRole('heading', { name: /ZOOM/i })).toBeVisible();
+	await page.getByRole('button', { name: 'Settings' }).click();
+	await expect(page.getByRole('slider', { name: 'Music' })).toHaveValue('0');
+	await page.getByRole('button', { name: 'Close settings' }).click();
 });
 
 test('follows the saved language in the document and in the labels', async ({ page }) => {

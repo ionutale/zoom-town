@@ -49,6 +49,9 @@ export interface GameOptions {
 	canvas: HTMLCanvasElement;
 	carId: CarId;
 	sound: boolean;
+	/** 0–1 music and effects level bars; the master mute is `sound`. */
+	musicVolume?: number;
+	effectsVolume?: number;
 	reducedMotion: boolean;
 	lang: Lang;
 	/** Drag steering with no auto-steer help. */
@@ -122,6 +125,8 @@ export class ZoomTownGame {
 		this.cameraRig = new ChaseCamera(this.track, 1);
 		this.cameraRig.calm = options.reducedMotion;
 		this.audio.soundOn = options.sound;
+		this.audio.setMusicVolume(options.musicVolume ?? 1);
+		this.audio.setEffectsVolume(options.effectsVolume ?? 1);
 
 		this.resize();
 		if (typeof ResizeObserver !== 'undefined') {
@@ -216,6 +221,16 @@ export class ZoomTownGame {
 
 	setSound(on: boolean): void {
 		this.audio.setSound(on);
+	}
+
+	setMusicVolume(value: number): void {
+		this.options.musicVolume = value;
+		this.audio.setMusicVolume(value);
+	}
+
+	setEffectsVolume(value: number): void {
+		this.options.effectsVolume = value;
+		this.audio.setEffectsVolume(value);
 	}
 
 	unlockSound(): void {

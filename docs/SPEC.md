@@ -29,7 +29,7 @@ Profile picker (star / flower / moon)
 ```
 
 - **Pause overlay:** Resume · Restart · Tutorial · Sound · Home. Every overlay traps focus, closes on Escape and marks the game behind it inert.
-- **Settings:** gear on the profile screen and in the garage. Sound, language, reduced motion, advanced driving, install app (iOS), reset current profile (3 s hold).
+- **Settings:** gear on the profile screen and in the garage. Master sound switch, Music and Effects level bars, language, reduced motion, advanced driving, install app (iOS), reset current profile (3 s hold).
 - **Tutorial:** before the first race of each profile; skippable; replayable from pause.
 - **Maximum three taps to driving:** profile → car → GO.
 
@@ -145,7 +145,8 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 
 - Three profile slots, each with a shape avatar (star, flower, moon), no names, no typing.
 - Per-profile data: best stars, unlocked cars, selected car, selected circuit, tutorial seen, trophy seen.
-- Device-wide settings: sound on/off, language (`it` default, `en`), reduced motion.
+- Device-wide settings: master sound on/off, music level (0–100%), effects level (0–100%), language (`it` default, `en`), reduced motion, advanced driving.
+- The two level bars are multipliers on the calibrated mix, stored with the save and clamped to 0–1 on load; a legacy save without them opens at full volume. The master switch still mutes everything in one tap.
 - Storage: `localStorage`, JSON, `version: 1`. Key `zoomtown.save.v1`; a missing save boots a fresh profile picker.
 - A corrupt save boots fresh, but a save written by a **newer** build (or an unversioned one) is read field by field: best stars, unlocked cars, selected car and circuit, tutorial and trophy state survive. There is no wipe-on-version-mismatch.
 - Unlocks are derived from best stars when a save is loaded (`carsForStars`), and that list is the single source of truth the garage renders.
@@ -172,6 +173,7 @@ Five selectable circuits. Each is a closed, clockwise loop, 8 m wide, three laps
 - Audio is preloaded after the first frame (idle callback) and decoded on the first pointer gesture, so the shell paints before 1.2 MB of samples are fetched.
 - iOS audio unlock on the first pointer event.
 - Mute persists; fully playable silently.
+- **Level bars:** Music scales the loop (and the duck under a callout); Effects scales one-shots, the engine loop and voice lines. Both apply live and persist per device. The bars are native range inputs, so arrow keys, Home/End and screen readers work without extra code.
 
 ## 12. Accessibility & safety
 

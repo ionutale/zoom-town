@@ -18,6 +18,10 @@ export interface Settings {
 	lang: Lang;
 	reducedMotion: boolean;
 	advancedDriving: boolean;
+	/** 0–1 multiplier on the calibrated music level. */
+	musicVolume: number;
+	/** 0–1 multiplier on effects, engine and voice. */
+	effectsVolume: number;
 }
 
 export interface SaveData {
@@ -33,7 +37,14 @@ export function defaultSave(): SaveData {
 	return {
 		version: SAVE_VERSION,
 		profiles: [null, null, null],
-		settings: { sound: true, lang: 'it', reducedMotion: false, advancedDriving: false }
+		settings: {
+			sound: true,
+			lang: 'it',
+			reducedMotion: false,
+			advancedDriving: false,
+			musicVolume: 1,
+			effectsVolume: 1
+		}
 	};
 }
 
@@ -56,13 +67,22 @@ function readProfile(value: unknown): ProfileData | null {
 	};
 }
 
+function readVolume(value: unknown): number {
+	if (value === undefined || value === null) return 1;
+	const volume = Number(value);
+	if (!Number.isFinite(volume)) return 1;
+	return Math.min(1, Math.max(0, volume));
+}
+
 function readSettings(value: unknown): Settings {
 	const raw = (value ?? {}) as Partial<Settings>;
 	return {
 		sound: raw.sound !== false,
 		lang: raw.lang === 'en' ? 'en' : 'it',
 		reducedMotion: Boolean(raw.reducedMotion),
-		advancedDriving: raw.advancedDriving === true
+		advancedDriving: raw.advancedDriving === true,
+		musicVolume: readVolume(raw.musicVolume),
+		effectsVolume: readVolume(raw.effectsVolume)
 	};
 }
 

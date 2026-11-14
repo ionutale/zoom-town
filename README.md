@@ -14,6 +14,10 @@ A portrait-first 3D toy-town racer for children aged 5–7. The car drives itsel
 | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | ![Racing through Candy Hills with a rival ahead and balloons on the line](docs/screenshots/race.png) | ![The trophy, three stars and 15 of 15 balloons](docs/screenshots/results.png) |
 
+| Settings                                                                                                        |                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Settings with a master sound switch and separate music and effects level bars](docs/screenshots/settings.png) | The master switch mutes everything; the **Music** and **Effects** bars are separate, remembered on the device, and apply live while the race is running. |
+
 ## Run
 
 ```sh
@@ -30,6 +34,8 @@ Open the portrait viewport at `http://127.0.0.1:4180/`. The game is designed for
 **Keyboard (desktop):** **← / A** and **→ / D** steer while held, **Space** (or **W** / **↑**) boosts, **P** pauses or resumes, **Esc** pauses. Keys are ignored while a dialog is open, and a muted hint appears in the garage on fine-pointer devices.
 
 If the child stops steering for five seconds, the autopilot drives the car along the road; the first steering input hands control straight back. Advanced driving has no autopilot.
+
+Settings has a master sound switch plus separate **Music** and **Effects** level bars (0–100%, remembered on the device). Effects covers balloons, boost, engine and the spoken callouts; Music ducks under a callout.
 
 ## Commands
 

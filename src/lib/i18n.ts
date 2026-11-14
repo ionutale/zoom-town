@@ -49,6 +49,8 @@ export interface Messages {
 
 	// Settings
 	sound: string;
+	music: string;
+	effects: string;
 	language: string;
 	calm: string;
 	advanced: string;
@@ -121,6 +123,8 @@ const IT: Messages = {
 	trophy: 'Trofeo',
 
 	sound: 'Suono',
+	music: 'Musica',
+	effects: 'Effetti',
 	language: 'Lingua',
 	calm: 'Calmo',
 	advanced: 'Avanzata',
@@ -194,6 +198,8 @@ const EN: Messages = {
 	trophy: 'Trophy',
 
 	sound: 'Sound',
+	music: 'Music',
+	effects: 'Effects',
 	language: 'Language',
 	calm: 'Calm',
 	advanced: 'Advanced',

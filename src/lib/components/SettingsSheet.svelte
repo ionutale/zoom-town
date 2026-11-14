@@ -10,6 +10,8 @@
 		hasProfile,
 		showInstall = false,
 		onSound,
+		onMusic,
+		onEffects,
 		onLang,
 		onMotion,
 		onAdvanced,
@@ -22,6 +24,8 @@
 		hasProfile: boolean;
 		showInstall?: boolean;
 		onSound: () => void;
+		onMusic: (value: number) => void;
+		onEffects: (value: number) => void;
 		onLang: (lang: Lang) => void;
 		onMotion: () => void;
 		onAdvanced: () => void;
@@ -31,6 +35,8 @@
 	} = $props();
 
 	const t = $derived(messages(lang));
+
+	const percent = (value: number) => Math.round(value * 100);
 
 	let hold = $state(0);
 	let timer: number | null = null;
@@ -108,6 +114,57 @@
 			<button class="switch" class:on={settings.sound} onclick={onSound} aria-label={t.toggleSound}>
 				<span></span>
 			</button>
+		</div>
+
+		<div class="row">
+			<span class="icon">
+				<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+					<circle cx="13" cy="29" r="4.2" fill="#26313C" />
+					<circle cx="27" cy="26" r="4.2" fill="#26313C" />
+					<path
+						d="M17 29 V12 L31 9 V26"
+						fill="none"
+						stroke="#26313C"
+						stroke-width="3.4"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</span>
+			<span class="label">{t.music}</span>
+			<input
+				class="bar"
+				type="range"
+				min="0"
+				max="100"
+				step="5"
+				value={percent(settings.musicVolume)}
+				style={`--fill:${percent(settings.musicVolume)}%`}
+				aria-label={t.music}
+				oninput={(event) => onMusic(Number(event.currentTarget.value) / 100)}
+			/>
+		</div>
+
+		<div class="row">
+			<span class="icon">
+				<svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true">
+					<rect x="8" y="18" width="5" height="13" rx="2.5" fill="#26313C" />
+					<rect x="17.5" y="9" width="5" height="22" rx="2.5" fill="#26313C" />
+					<rect x="27" y="14" width="5" height="17" rx="2.5" fill="#26313C" />
+				</svg>
+			</span>
+			<span class="label">{t.effects}</span>
+			<input
+				class="bar"
+				type="range"
+				min="0"
+				max="100"
+				step="5"
+				value={percent(settings.effectsVolume)}
+				style={`--fill:${percent(settings.effectsVolume)}%`}
+				aria-label={t.effects}
+				oninput={(event) => onEffects(Number(event.currentTarget.value) / 100)}
+			/>
 		</div>
 
 		<div class="row">
@@ -279,6 +336,9 @@
 	.card {
 		position: relative;
 		width: min(100%, 330px);
+		max-height: calc(100dvh - 32px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -354,6 +414,62 @@
 	.switch.on span {
 		transform: translateX(24px);
 	}
+	/* Level bars: native range inputs, restyled, so keyboard and screen readers
+	   get the behaviour for free. */
+	.bar {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 112px;
+		height: 34px;
+		margin: 0;
+		background: transparent;
+		cursor: pointer;
+		touch-action: pan-y;
+	}
+	.bar::-webkit-slider-runnable-track {
+		height: 10px;
+		border-radius: 999px;
+		background: linear-gradient(
+			to right,
+			var(--zt-teal) 0 var(--fill),
+			color-mix(in srgb, var(--zt-ink) 16%, transparent) var(--fill) 100%
+		);
+	}
+	.bar::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 24px;
+		height: 24px;
+		margin-top: -7px;
+		border-radius: 50%;
+		background: var(--zt-white);
+		border: 3px solid var(--zt-ink);
+		box-shadow: 0 2px 0 var(--zt-shadow);
+	}
+	.bar::-moz-range-track {
+		height: 10px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--zt-ink) 16%, transparent);
+	}
+	.bar::-moz-range-progress {
+		height: 10px;
+		border-radius: 999px;
+		background: var(--zt-teal);
+	}
+	.bar::-moz-range-thumb {
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		background: var(--zt-white);
+		border: 3px solid var(--zt-ink);
+		box-shadow: 0 2px 0 var(--zt-shadow);
+	}
+	.bar:focus-visible {
+		outline: 4px solid var(--zt-ink);
+		outline-offset: 2px;
+		border-radius: 10px;
+	}
+
 	.pills {
 		display: flex;
 		gap: 4px;

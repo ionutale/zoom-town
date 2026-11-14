@@ -96,6 +96,10 @@ _Avoid_: assist mode, auto-drive, self-driving
 The HUD gauge that shows the car's current speed in kilometres per hour.
 _Avoid_: dial, speed display
 
+**Level bar**:
+The Music or Effects volume control in Settings, 0–100%. Independent of the master sound switch and remembered on the device.
+_Avoid_: volume slider, mixer, EQ
+
 **HUD**:
 The always-on race display: the vertical track ribbon, balloon count, lap pips, boost meter, speedometer, and pause button.
 _Avoid_: UI, overlay, interface

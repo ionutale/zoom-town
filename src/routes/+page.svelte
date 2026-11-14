@@ -109,6 +109,8 @@
 			carId: initialCar,
 			advancedDriving: save.settings.advancedDriving,
 			sound: save.settings.sound,
+			musicVolume: save.settings.musicVolume,
+			effectsVolume: save.settings.effectsVolume,
 			reducedMotion: save.settings.reducedMotion,
 			lang: save.settings.lang,
 			trackId: initialTrack,
@@ -362,6 +364,20 @@
 		game?.setSound(settings.sound);
 	}
 
+	function setMusicVolume(value: number) {
+		const settings = { ...save.settings, musicVolume: value };
+		save = { ...save, settings };
+		storeSave(save);
+		game?.setMusicVolume(value);
+	}
+
+	function setEffectsVolume(value: number) {
+		const settings = { ...save.settings, effectsVolume: value };
+		save = { ...save, settings };
+		storeSave(save);
+		game?.setEffectsVolume(value);
+	}
+
 	function toggleMotion() {
 		const settings = { ...save.settings, reducedMotion: !save.settings.reducedMotion };
 		save = { ...save, settings };
@@ -532,6 +548,8 @@
 				hasProfile={profile !== null}
 				showInstall={iosDevice && !installed}
 				onSound={toggleSound}
+				onMusic={setMusicVolume}
+				onEffects={setEffectsVolume}
 				onLang={setLang}
 				onMotion={toggleMotion}
 				onAdvanced={toggleAdvanced}
